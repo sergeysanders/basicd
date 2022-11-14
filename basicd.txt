@@ -1,0 +1,1 @@
+Debug/main.c.o Debug/rpn.c.o Debug/bcore.c.o Debug/banalizer.c.o Debug/bfunc.c.o Debug/bstring.c.o Debug/bprime.c.o Debug/berror.c.o
