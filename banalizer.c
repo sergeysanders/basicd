@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2022 Sergey Sanders
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -82,7 +82,7 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
     bool tokStr = false;
     bool done = false;
     bool quoted = false;
-    
+
     strncpy(tokenString,str,BASIC_LINE_LEN);
     str = tokenString;
     bToken.ptr = 0;
@@ -146,20 +146,21 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
         case 'A' ... 'Z':
         case FUNC_TYPE_SECONDARY ... 0xff:
             tokStr = true;
-            if (trSpace) // second string
+            if (trSpace) // second statement
                 bToken.t[bToken.ptr].op = ' ';
             else strPtr++;
             break;
 
         case FUNC_TYPE_PRIMARY ... (FUNC_TYPE_SECONDARY-1):
             if (trSpace) // there is non terminated operand
-              {
+            {
                 bToken.t[bToken.ptr].op = ' ';
                 strPtr--;
                 break;
-              }
-            bToken.t[bToken.ptr].op = str[strPtr+1] == '(' ? '(' : ' ';
+            }
+
             strPtr++;
+            bToken.t[bToken.ptr].op = (str[strPtr] == '(' || str[strPtr] == ':') ? str[strPtr] : ' ';
             break;
 
         default:

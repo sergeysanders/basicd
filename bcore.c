@@ -362,12 +362,14 @@ _bas_stat_e basic_line_eval(void)
                 BasicError = BASIC_ERR_UNKNOWN_FUNC;
                 return BasicStat = BASIC_STAT_ERR;
             }
-            uint8_t opCode = *bToken.t[bToken.ptr++].str;
+            uint8_t opCode = *bToken.t[bToken.ptr].str;
+            if (firstOp != ':') bToken.ptr++;
             if (opCode < __OPCODE_LAST)
             {
                 if (BasicFunction[opCode & (~OPCODE_MASK)].func(RPN_INT(firstOp)))
                     return BasicStat;
             }
+
         }
         if (bToken.t[bToken.ptr].op == ':')
             ExecLine.statement ++;
