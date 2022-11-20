@@ -44,7 +44,7 @@
 typedef bool uint8_t;
 #endif
 
-const _rpn_type_t VarError = {.type = VAR_TYPE_ERROR};
+const _rpn_type_t VarError = {.type = VAR_TYPE_NONE};
 
 struct
 {
@@ -88,13 +88,12 @@ _rpn_type_t *rpn_pop_queue(void)
 _rpn_type_t *rpn_peek_queue(bool head)
 {
     static uint8_t peekPtr = 0;
+    BasicError = BASIC_ERR_NONE;
     if (head) peekPtr = 0;
     if (!RPNQueue.ptr || peekPtr >= RPNQueue.ptr)
     {
-        BasicError = BASIC_ERR_QUEUE_EMPTY;
         return (_rpn_type_t *)&VarError;
     }
-    BasicError = BASIC_ERR_NONE;
     return &RPNQueue.value[peekPtr++];
 }
 
@@ -231,11 +230,13 @@ _bas_err_e rpn_eval(uint8_t op)
         value[0].var.f = value[1].var.f * value[0].var.f;
         break;
     case OPERATOR_DIV:
-        if (!value[0].var.f) return BASIC_ERR_DIV_ZERO;
+        if (!value[0].var.f) 
+            return BasicError = BASIC_ERR_DIV_ZERO;
         value[0].var.f = value[1].var.f / value[0].var.f;
         break;
     case OPERATOR_MOD:
-        if (!value[0].var.f) return BASIC_ERR_DIV_ZERO;
+        if (!value[0].var.f) 
+            return BasicError = BASIC_ERR_DIV_ZERO;
         value[0].var.f = fmod(value[1].var.f,value[0].var.f);
         break;
     case OPERATOR_PWR:

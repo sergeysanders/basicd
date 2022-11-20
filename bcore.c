@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2022 Sergey Sanders
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -86,8 +86,21 @@ _bas_var_t *var_add(char *name)
     varPtr->next = NULL; ///--- already null;
     varPtr->name = (char *)(varPtr + sizeof(_bas_var_t));
     strcpy(varPtr->name,name);
-    varPtr->value.type = (lastChar == '$') ? VAR_TYPE_STRING : (lastChar == '#') ? VAR_TYPE_INTEGER : VAR_TYPE_FLOAT;
-    varPtr->param.size = 0;
+    switch (lastChar)
+    {
+    case '$':
+        varPtr->value.type = VAR_TYPE_STRING;
+        break;
+    case '_':
+        varPtr->value.type = VAR_TYPE_BYTE;
+        break;
+    case '#':
+        varPtr->value.type = VAR_TYPE_INTEGER;
+        break;
+    default:
+        varPtr->value.type = VAR_TYPE_FLOAT;
+    }
+    varPtr->param.size[0] = 0;
     return varPtr;
 }
 
@@ -344,18 +357,22 @@ _bas_stat_e __load(_rpn_type_t param)
 _bas_stat_e basic_line_eval(void)
 {
     uint8_t firstOp;
+    char *str;
 
     while (1)
     {
         if(!*bToken.t[bToken.ptr].str && !bToken.t[bToken.ptr].op) return BasicStat = BASIC_STAT_SKIP; // empty line (rem found)
-        if (bToken.t[bToken.ptr].op == '=') // variable assignement
+        firstOp = bToken.t[bToken.ptr].op;
+        switch (firstOp)
         {
+        case '=': // variable assignement
             if (BasicFunction[__OPCODE_LET & ~OPCODE_MASK].func(RPN_INT(0))) return BasicStat;
-        }
-        else
-        {
-            firstOp = bToken.t[bToken.ptr].op;
-            char *str = bToken.t[bToken.ptr].str;
+            break;
+        case '[': // array assignement
+            if (array_set(bToken.t[bToken.ptr].str,false)) return BasicStat;
+            break;
+        default:
+            str = bToken.t[bToken.ptr].str;
             if (*str == '\'') *str = (char)__OPCODE_REM;
             if((uint8_t)*str < OPCODE_MASK)
             {
@@ -447,4 +464,87 @@ void prog_run(uint16_t lineNumber)
 {
     _rpn_type_t lNum = {.type=VAR_TYPE_INTEGER,.var.i = lineNumber};
     __run(lNum);
+}
+
+_bas_stat_e array_set(char *name,bool init) // set array elements
+{
+    uint8_t bracketCnt = 1; // count square brackets
+    uint8_t i;
+    uint16_t dimPtr[2] = {0,0};
+    _rpn_type_t *dimVar;
+    _bas_var_t *var;
+    if ((var = var_get(name)) == NULL)
+    {
+        BasicError = BASIC_ERR_UNKNOWN_VAR;
+        return BasicStat = BASIC_STAT_ERR;
+    }
+    if (!init)
+    {
+        for (i=bToken.ptr; i < PARSER_MAX_TOKENS-1 && bToken.t[i].op; i++)
+        {
+            if (bToken.t[i].op == '[') bracketCnt++;
+            if (bToken.t[i].op == ']') bracketCnt--;
+            if (!bracketCnt)
+            {
+                bToken.t[i].op = ';';// set delimeter for token evaluation
+                break;
+            }
+        }
+        if (bToken.t[i].op != ';')
+        {
+            BasicError = BASIC_ERR_PAR_MISMATCH;
+            return BasicStat = BASIC_STAT_ERR;
+        }
+        token_eval_expression(0);
+        if ((dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE)
+        {
+            BasicError = BASIC_ERR_ARRAY_DIMENTION;
+        }
+        else
+        {
+            dimPtr[0] = (uint16_t) dimVar->var.i;
+            dimPtr[1] = (dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE ? 0 : (uint16_t) dimVar->var.i;
+            if (rpn_pop_queue()->type != VAR_TYPE_NONE)
+                BasicError = BASIC_ERR_ARRAY_DIMENTION;
+        }
+        if((dimPtr[0] >= var->param.size[0]) || (dimPtr[1] && dimPtr[1] >= var->param.size[1]))
+            BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+    }
+    if (bToken.t[bToken.ptr++].op != '=') BasicError = BASIC_ERR_MISSING_EQUAL;
+    if (BasicError) return BasicStat = BASIC_STAT_ERR;
+    if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicStat = BASIC_STAT_ERR;
+    
+    bool head = true;
+    uint32_t arrayPtr = dimPtr[0] + dimPtr[1] * var->param.size[0];
+    uint32_t arrayLimit = var->param.size[0] + var->param.size[1] * var->param.size[0];
+    uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4;
+    void *data = var->value.var.array + arrayPtr*dSize;
+    for (; arrayPtr<arrayLimit; arrayPtr++)
+    {
+        if ((dimVar = rpn_peek_queue(head))->type == VAR_TYPE_NONE)
+            break;
+        head = false;
+        /// todo: support for different types
+        switch(var->value.type)
+        {
+        case VAR_TYPE_ARRAY_BYTE:
+            *(uint8_t *)data = (uint8_t)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            break;
+        case VAR_TYPE_ARRAY_INTEGER:
+            *(int32_t *)data = (int32_t)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            break;
+        case VAR_TYPE_ARRAY_FLOAT:
+            *(float *)data = (float)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            break;
+        case VAR_TYPE_ARRAY_STRING:
+            *(int32_t *)data = (int32_t)dimVar->var.i;
+            break;
+        default:
+            break;
+        }
+        data += dSize;
+    }
+    if (rpn_peek_queue(false)->type != VAR_TYPE_NONE)
+        BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+    return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
 }

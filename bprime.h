@@ -38,5 +38,6 @@ _bas_stat_e __goto(_rpn_type_t param);
 _bas_stat_e __if(_rpn_type_t param);
 _bas_stat_e __gosub(_rpn_type_t param);
 _bas_stat_e __return(_rpn_type_t param);
+_bas_stat_e __dim(_rpn_type_t param);
 
 #endif // _BPRIME_H_INCLUDED

@@ -62,7 +62,7 @@ typedef struct
     void *next;
     union
     {
-        uint16_t size; // allocated memory size for complex variables
+        uint16_t size[2]; // allocated memory size for complex variables,string - size[0], arrays size[dim 0],size[dim 1]
         _bas_loop_t *loop; // pointer to loop parameter
     }param;
     char *name;
@@ -81,6 +81,8 @@ _bas_stat_e __new(_rpn_type_t param);
 _bas_stat_e __list(_rpn_type_t param);
 _bas_stat_e __load(_rpn_type_t param);
 _bas_stat_e __run(_rpn_type_t param);
+
+_bas_stat_e array_set(char *name,bool init);
 
 extern _bas_stat_e BasicStat;
 extern _bas_err_e BasicError;

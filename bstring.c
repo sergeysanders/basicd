@@ -81,6 +81,20 @@ _bas_stat_e string_add(char *str1, char *str2)
     return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
 }
 
+_bas_err_e var_set_string(_bas_var_t *var, char *str)
+{
+    if(var->param.size[0] < (strlen(str)+1))
+    {
+        if (var->param.size[0]) free(var->value.var.str);
+        var->param.size[0] = strlen(str)+1;
+        if ((var->value.var.str = (char *)malloc(var->param.size[0])) == NULL)
+            return BasicError = BASIC_ERR_MEM_OUT;
+        //printf("\n *** Reallocate %d bytes for %s\n", var->size, var->value.var.str);
+    }
+    strncpy(var->value.var.str,str,BASIC_STRING_LEN);
+    return BasicError = BASIC_ERR_NONE;
+}
+
 uint8_t is_string(char *str)
 {
     uint8_t lastCharPos = strlen(str);

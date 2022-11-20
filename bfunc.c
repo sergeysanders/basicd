@@ -73,7 +73,7 @@ const _bas_func_t BasicFunction[] =
     {"cls",__basic_dummy},
     /// --- data manipulation
     {"let",__let},
-    {"dim",__basic_dummy},
+    {"dim",__dim},
     {"data",__basic_dummy},
     {"read",__basic_dummy},
     /// --- interpreter control 

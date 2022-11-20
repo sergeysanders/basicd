@@ -52,11 +52,16 @@
 
 typedef enum
 {
-    VAR_TYPE_ERROR, // multi-byte variables
-    VAR_TYPE_STRING,
-    VAR_TYPE_FLOAT = 0x08,  // numeric variables
-    VAR_TYPE_LOOP,  // for loop variable, .size points to the loop descriptor  
-    VAR_TYPE_INTEGER = 0x10, // integer variables
+    VAR_TYPE_NONE,             // multi-byte variables
+    VAR_TYPE_STRING,            // string,  variable name ended with '$'
+    VAR_TYPE_ARRAY_FLOAT = 0x04,
+    VAR_TYPE_ARRAY_INTEGER,
+    VAR_TYPE_ARRAY_BYTE,
+    VAR_TYPE_ARRAY_STRING,
+    VAR_TYPE_FLOAT = 0x08,      // numeric variables
+    VAR_TYPE_LOOP,              // for loop variable, .size points to the loop descriptor  
+    VAR_TYPE_INTEGER = 0x10,    // integer, variable name ended with '#'
+    VAR_TYPE_BYTE,              // byte,  variable name ended with '_'
     VAR_TYPE_BOOL,
 } _var_type_e;
 
@@ -69,6 +74,7 @@ typedef struct
         int32_t     i;
         uint32_t    w;
         char*       str;
+        void*       array;
     } var;
 } _rpn_type_t;
 

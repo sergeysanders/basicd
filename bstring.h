@@ -23,8 +23,7 @@
 #ifndef _BSTRING_H_INCLUDED
 #define _BSTRING_H_INCLUDED
 
-#include "bfunc.h"
-#include "rpn.h"
+#include "bcore.h"
 
 #define BASIC_STRING_LEN 128
 
@@ -32,6 +31,7 @@ _bas_stat_e __val$(_rpn_type_t param);
 _bas_stat_e __hex$(_rpn_type_t param);
 _bas_stat_e __int(_rpn_type_t param);
 _bas_stat_e string_add(char *str1, char *str2);
+_bas_err_e var_set_string(_bas_var_t *var, char *str);
 
 extern char strTmpBuff[BASIC_STRING_LEN];
 

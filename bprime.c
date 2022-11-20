@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2022 Sergey Sanders
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -112,16 +112,13 @@ _bas_stat_e __print(_rpn_type_t param)
         while (1)
         {
             var = rpn_peek_queue(head);
-            if (var->type == VAR_TYPE_ERROR)
-            {
-                BasicError = BASIC_ERR_NONE;// nothing to print, not an actual error
+            if (var->type == VAR_TYPE_NONE)// nothing to print
                 break;
-            }
             if (!head) printf("\n"); // print new line when separated by commas
             head = false;
             switch(var->type)
             {
-            case VAR_TYPE_ERROR:
+            case VAR_TYPE_NONE:
                 break;
             case VAR_TYPE_FLOAT:
             case VAR_TYPE_LOOP:
@@ -135,6 +132,8 @@ _bas_stat_e __print(_rpn_type_t param)
                 break;
             case VAR_TYPE_STRING:
                 printf("%s",var->var.str);
+                break;
+            default:
                 break;
             }
         }
@@ -171,10 +170,6 @@ _bas_stat_e __input(_rpn_type_t param)
 
         switch (var->value.type)
         {
-        case VAR_TYPE_ERROR:
-        case VAR_TYPE_LOOP:
-            BasicError = BASIC_ERR_TYPE_MISMATCH; // you cannot input loop
-            break;
         case VAR_TYPE_FLOAT:
             var->value.var.f = atof(strTmpBuff);
             break;
@@ -185,20 +180,23 @@ _bas_stat_e __input(_rpn_type_t param)
             var->value.var.i = strtol(strTmpBuff,NULL,0);
             break;
         case VAR_TYPE_STRING:
-            if(var->param.size < (strlen(strTmpBuff)+1))
-            {
-                if (var->param.size) free(var->value.var.str);
-                var->param.size = strlen(strTmpBuff)+1;
-                if ((var->value.var.str = (char *)malloc(var->param.size)) == NULL)
-                {
-                    BasicError = BASIC_ERR_MEM_OUT;
-                    break;
-                }
-            }
-            strncpy(var->value.var.str,strTmpBuff,BASIC_STRING_LEN);
+            var_set_string(var,strTmpBuff);
+            /* if(var->param.size[0] < (strlen(strTmpBuff)+1))
+             {
+                 if (var->param.size[0]) free(var->value.var.str);
+                 var->param.size[0] = strlen(strTmpBuff)+1;
+                 if ((var->value.var.str = (char *)malloc(var->param.size[0])) == NULL)
+                 {
+                     BasicError = BASIC_ERR_MEM_OUT;
+                     break;
+                 }
+             }
+             strncpy(var->value.var.str,strTmpBuff,BASIC_STRING_LEN);*/
+            break;
+        default:
+            BasicError = BASIC_ERR_TYPE_MISMATCH; // you cannot input loop
             break;
         }
-        // printf("\n");
     }
     while ((bToken.t[bToken.ptr++].op == ',') && !BasicError);
     return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
@@ -233,8 +231,6 @@ _bas_stat_e __let(_rpn_type_t param)
         tmpVar = *rpn_pop_queue();
     switch (var->value.type)
     {
-    case VAR_TYPE_ERROR:
-        break;
     case VAR_TYPE_FLOAT:
     case VAR_TYPE_LOOP:
         if(tmpVar.type < VAR_TYPE_FLOAT)
@@ -255,7 +251,9 @@ _bas_stat_e __let(_rpn_type_t param)
             BasicError = BASIC_ERR_TYPE_MISMATCH;
             break;
         }
-        if(var->param.size < (strlen(tmpVar.var.str)+1))
+        var_set_string(var,tmpVar.var.str);
+        /*
+        if(var->param.size[0] < (strlen(tmpVar.var.str)+1))
         {
             if (var->param.size) free(var->value.var.str);
             var->param.size = strlen(tmpVar.var.str)+1;
@@ -266,14 +264,16 @@ _bas_stat_e __let(_rpn_type_t param)
             }
             //printf("\n *** Reallocate %d bytes for %s\n", var->size, var->value.var.str);
         }
-        strncpy(var->value.var.str,tmpVar.var.str,BASIC_STRING_LEN);
+        strncpy(var->value.var.str,tmpVar.var.str,BASIC_STRING_LEN); */
+        break;
+    default:
         break;
     }
     return BasicStat = (BasicError == BASIC_ERR_NONE) ? BASIC_STAT_OK : BASIC_STAT_ERR;
 };
 
 
-static _bas_stat_e get_loop_var(float *var)
+static _bas_stat_e var_get_loop(float *var)
 {
     _rpn_type_t *tmpVar;
     uint8_t opParam = bToken.t[bToken.ptr].op;
@@ -328,17 +328,17 @@ _bas_stat_e __for(_rpn_type_t param)
         }
     }
 
-    if (get_loop_var(&var->value.var.f)) return BasicStat = BASIC_STAT_ERR;
+    if (var_get_loop(&var->value.var.f)) return BasicStat = BASIC_STAT_ERR;
     var->value.type = VAR_TYPE_LOOP;
     if (!bToken.t[bToken.ptr].op || ((uint8_t)*bToken.t[bToken.ptr].str != __OPCODE_TO))
     {
         BasicError = BASIC_ERR_INCOMPLETE_FOR;
         return BasicStat = BASIC_STAT_ERR;
     }
-    if (get_loop_var(&var->param.loop->limit)) return BasicStat = BASIC_STAT_ERR;
+    if (var_get_loop(&var->param.loop->limit)) return BasicStat = BASIC_STAT_ERR;
     var->param.loop->step = 1;
     if ((uint8_t)*bToken.t[bToken.ptr].str == __OPCODE_STEP)
-        if (get_loop_var(&var->param.loop->step)) return BasicStat = BASIC_STAT_ERR;
+        if (var_get_loop(&var->param.loop->step)) return BasicStat = BASIC_STAT_ERR;
 
     var->param.loop->line.number = bToken.t[bToken.ptr].op == ':' ? ExecLine.number : NextLine.number;
     var->param.loop->line.statement = bToken.t[bToken.ptr].op == ':' ? ExecLine.statement + 1 : 0;
@@ -421,3 +421,71 @@ _bas_stat_e __return(_rpn_type_t param)
     ExecLine = GosubStack.line[--GosubStack.ptr];
     return BasicStat = BASIC_STAT_JUMP;
 };
+
+_bas_stat_e __dim(_rpn_type_t param)
+{
+    _bas_var_t *var;
+    char *varName = bToken.t[bToken.ptr].str;
+    BasicError = BASIC_ERR_NONE;
+    if (bToken.t[bToken.ptr].op != '[') BasicError = BASIC_ERR_PAR_MISMATCH;
+    if (!BasicError && bas_func_opcode(varName)) BasicError = BASIC_ERR_RESERVED_NAME;
+    if (!BasicError && (var = var_get(bToken.t[bToken.ptr].str)) != NULL) BasicError = BASIC_ERR_ARRAY_REDEFINE;
+    if (!BasicError)
+    {
+        var = var_add(bToken.t[bToken.ptr++].str);
+        var->param.size[0] = (uint16_t) strtol(bToken.t[bToken.ptr].str,NULL,0);
+        var->param.size[1] = (bToken.t[bToken.ptr].op == ',') ? (uint16_t) strtol(bToken.t[++bToken.ptr].str,NULL,0) : 0;
+        if ((var->param.size[0] == 0 && var->param.size[1] == 0) || (bToken.t[bToken.ptr].op != ']'))
+            BasicError = BASIC_ERR_ARRAY_DIMENTION;
+        else
+        {
+            size_t arraySize = var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_BYTE) ? 1 : sizeof(var->value));
+            if ((var->value.var.array = (char *)malloc(arraySize)) == NULL)
+                BasicError = BASIC_ERR_MEM_OUT;
+        }
+    }
+    if (BasicError) return BasicStat = BASIC_STAT_ERR;
+
+    switch (var->value.type)
+    {
+    case VAR_TYPE_FLOAT:
+    case VAR_TYPE_LOOP:
+        var->value.type = VAR_TYPE_ARRAY_FLOAT;
+        break;
+    case VAR_TYPE_INTEGER:
+    case VAR_TYPE_BOOL:
+        var->value.type = VAR_TYPE_ARRAY_INTEGER;
+        break;
+    case VAR_TYPE_BYTE:
+        var->value.type = VAR_TYPE_ARRAY_BYTE;
+        break;
+    case VAR_TYPE_STRING:
+        var->value.type = VAR_TYPE_ARRAY_STRING;
+        break;
+    default:
+        break;
+    }
+
+    printf("Array allocated: dim0 = %d, dim1 = %d, size = %lu\n",var->param.size[0],var->param.size[1],(var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_ARRAY_BYTE) ? 1 : sizeof(var->value))));
+    bToken.ptr++;
+    if (bToken.t[bToken.ptr].op == '=')
+    {
+        if (array_set(varName,true)) return BASIC_STAT_ERR;
+        printf("Array data: ");
+        for (uint16_t i=0; i < (var->param.size[0] + var->param.size[0] * var->param.size[1]); i++)
+        {
+            printf("0x%02x ",*(uint8_t *)(var->value.var.array + i*(var->value.type = VAR_TYPE_BYTE ? 1 : 4)));
+        }
+
+        printf("\n");
+
+    }
+    /*
+        if (bToken.t[bToken.ptr].op != '=')
+        {
+            BasicError = BASIC_ERR_MISSING_OPERATOR;
+            return BasicStat = BASIC_STAT_ERR;
+        }
+    */
+    return BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+}

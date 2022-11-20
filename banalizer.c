@@ -117,6 +117,8 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
         case OPERATOR_AND:
         case OPERATOR_OR:
         case OPERATOR_NOT:
+        case '[':
+        case ']':
         case '(' ... ',':
         case ':' ... '>':
             if (quoted)
@@ -140,6 +142,7 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
         case '.':
         case '$': // string variable
         case '#': // integer variable
+        case '_': // byte variable
         case '?':
         case '0' ... '9':
         case 'a' ... 'z':
@@ -243,8 +246,8 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
         case ' ': // skip
             break;
         case ',': // skip if inside brackets
-            break;
-            if (!parCnt) // evaluate the stack and store in the queue
+            //break;
+           // if (!parCnt) // evaluate the stack and store in the queue
             {
                 while ((opCode = rpn_pop_stack()))
                 {
@@ -252,7 +255,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 #if RPN_PRINT_DEBUG
                     rpn_print_queue(true);
                     rpn_print_stack(true);
-                    if(BasicError) printf("RPN error(0): %s\n",RpnErrorText[BasicError]);
+                    if(BasicError) printf("RPN error(0): %s\n",BErrorText[BasicError]);
 #endif
                     if (BasicError) return BasicError;
                 }
@@ -290,7 +293,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 #if RPN_PRINT_DEBUG
         rpn_print_queue(true);
         rpn_print_stack(true);
-        if(BasicError) printf("RPN error(1): %s\n",RpnErrorText[BasicError]);
+        if(BasicError) printf("RPN error(1): %s\n",BErrorText[BasicError]);
 #endif
         if (BasicError) return BasicError;
     }
@@ -301,7 +304,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 #if RPN_PRINT_DEBUG
         rpn_print_queue(true);
         rpn_print_stack(true);
-        if(BasicError) printf("RPN error(2): %s\n",RpnErrorText[BasicError]);
+        if(BasicError) printf("RPN error(2): %s\n",BErrorText[BasicError]);
 #endif
         if (BasicError) return BasicError;
     }
