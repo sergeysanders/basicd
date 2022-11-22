@@ -466,6 +466,13 @@ void prog_run(uint16_t lineNumber)
     __run(lNum);
 }
 
+int32_t var_get_integer(_rpn_type_t *var)
+{
+    if(var->type & VAR_TYPE_INTEGER) return (int32_t)var->var.i;
+    if(var->type & VAR_TYPE_FLOAT) return (int32_t)var->var.f;
+    return 0;
+}
+
 _bas_stat_e array_set(char *name,bool init) // set array elements
 {
     uint8_t bracketCnt = 1; // count square brackets
@@ -480,6 +487,7 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
     }
     if (!init)
     {
+        bToken.ptr++;
         for (i=bToken.ptr; i < PARSER_MAX_TOKENS-1 && bToken.t[i].op; i++)
         {
             if (bToken.t[i].op == '[') bracketCnt++;
@@ -496,26 +504,36 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
             return BasicStat = BASIC_STAT_ERR;
         }
         token_eval_expression(0);
+        bToken.ptr++;
         if ((dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE)
         {
             BasicError = BASIC_ERR_ARRAY_DIMENTION;
         }
         else
         {
-            dimPtr[0] = (uint16_t) dimVar->var.i;
-            dimPtr[1] = (dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE ? 0 : (uint16_t) dimVar->var.i;
+            //dimPtr[0] = (uint16_t)var_get_integer(dimVar);
+            //dimPtr[1] = var->param.size[1] ? (uint16_t)var_get_integer(rpn_pop_queue()) : 0;
+            dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0);
+            dimVar = rpn_pop_queue();
+            dimPtr[1] = var->param.size[1] ? (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0) : 0;
+            
             if (rpn_pop_queue()->type != VAR_TYPE_NONE)
                 BasicError = BASIC_ERR_ARRAY_DIMENTION;
+            else
+                BasicError = BASIC_ERR_NONE; // queue is empty
         }
-        if((dimPtr[0] >= var->param.size[0]) || (dimPtr[1] && dimPtr[1] >= var->param.size[1]))
-            BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+        if(var->param.size[1])
+        {
+            if((dimPtr[0] >= var->param.size[1]) || (dimPtr[1] >= var->param.size[0])) BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+        }
+        else if(dimPtr[0] >= var->param.size[0]) BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
     }
-    if (bToken.t[bToken.ptr++].op != '=') BasicError = BASIC_ERR_MISSING_EQUAL;
+    if (!BasicError && (bToken.t[bToken.ptr++].op != '=')) BasicError = BASIC_ERR_MISSING_EQUAL;
     if (BasicError) return BasicStat = BASIC_STAT_ERR;
     if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicStat = BASIC_STAT_ERR;
-    
+
     bool head = true;
-    uint32_t arrayPtr = dimPtr[0] + dimPtr[1] * var->param.size[0];
+    uint32_t arrayPtr = dimPtr[0] + dimPtr[1] * var->param.size[1];
     uint32_t arrayLimit = var->param.size[0] + var->param.size[1] * var->param.size[0];
     uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4;
     void *data = var->value.var.array + arrayPtr*dSize;
@@ -528,13 +546,13 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
         switch(var->value.type)
         {
         case VAR_TYPE_ARRAY_BYTE:
-            *(uint8_t *)data = (uint8_t)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            *(uint8_t *)data = (uint8_t)(dimVar->type & VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
             break;
         case VAR_TYPE_ARRAY_INTEGER:
-            *(int32_t *)data = (int32_t)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            *(int32_t *)data = (int32_t)(dimVar->type & VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
             break;
         case VAR_TYPE_ARRAY_FLOAT:
-            *(float *)data = (float)(dimVar->type == VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
+            *(float *)data = (float)(dimVar->type & VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
             break;
         case VAR_TYPE_ARRAY_STRING:
             *(int32_t *)data = (int32_t)dimVar->var.i;

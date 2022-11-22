@@ -55,6 +55,7 @@ enum
     __OPCODE_RUN,
     __OPCODE_LIST,
     __OPCODE_NEW,
+    __OPCODE_ARRAY,
     __OPCODE_AT,
     __OPCODE_INK,
     __OPCODE_PAPER,

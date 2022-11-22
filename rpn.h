@@ -52,15 +52,16 @@
 
 typedef enum
 {
-    VAR_TYPE_NONE,             // multi-byte variables
-    VAR_TYPE_STRING,            // string,  variable name ended with '$'
-    VAR_TYPE_ARRAY_FLOAT = 0x04,
+    VAR_TYPE_NONE,             
+    VAR_TYPE_STRING,           // string,  variable name ended with '$'
+    VAR_TYPE_ARRAY,            // Pointer to an array
+    VAR_TYPE_ARRAY_FLOAT = 0x08,// multi-byte variables
     VAR_TYPE_ARRAY_INTEGER,
     VAR_TYPE_ARRAY_BYTE,
     VAR_TYPE_ARRAY_STRING,
-    VAR_TYPE_FLOAT = 0x08,      // numeric variables
+    VAR_TYPE_FLOAT = 0x10,      // numeric variables
     VAR_TYPE_LOOP,              // for loop variable, .size points to the loop descriptor  
-    VAR_TYPE_INTEGER = 0x10,    // integer, variable name ended with '#'
+    VAR_TYPE_INTEGER = 0x20,    // integer, variable name ended with '#'
     VAR_TYPE_BYTE,              // byte,  variable name ended with '_'
     VAR_TYPE_BOOL,
 } _var_type_e;
@@ -80,6 +81,7 @@ typedef struct
 
 #define RPN_FLOAT(x)    ((_rpn_type_t){.type = VAR_TYPE_FLOAT,.var.f = x})
 #define RPN_INT(x)      ((_rpn_type_t){.type = VAR_TYPE_INTEGER,.var.i = x})
+#define RPN_STR(x)      ((_rpn_type_t){.type = VAR_TYPE_STRING,.var.str = x})
 #define RPN_STR(x)      ((_rpn_type_t){.type = VAR_TYPE_STRING,.var.str = x})
 
 _bas_err_e rpn_push_queue(_rpn_type_t var);

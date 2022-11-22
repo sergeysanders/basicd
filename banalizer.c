@@ -198,6 +198,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 {
 #define RPN_PRINT_DEBUG 0
     uint8_t parCnt = opParam == '(' ? 1 : 0;
+    uint8_t sqParCnt = 0;
     uint8_t opCode;
     char *tokenStr;
     _bas_var_t *variable;
@@ -227,6 +228,17 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
             {
                 if ((variable = var_get(bToken.t[bToken.ptr].str)) != NULL)
                 {
+                    if (variable->value.type & VAR_TYPE_ARRAY_FLOAT) // array
+                    {
+                        if (bToken.t[bToken.ptr].op != '[') return BasicError = BASIC_ERR_PAR_MISMATCH;
+                        if (rpn_push_stack(__OPCODE_ARRAY) != BASIC_ERR_NONE) return BasicError;
+                        if (rpn_push_stack('[') != BASIC_ERR_NONE) return BasicError;
+                        if (rpn_push_queue(((_rpn_type_t){.type = VAR_TYPE_ARRAY,.var.array = variable})) != BASIC_ERR_NONE) return BasicError;
+                        parCnt++;
+                        sqParCnt++;
+                        continue;
+                    }
+                    else
                     rpn_push_queue(variable->value);
                 }
                 else
@@ -246,8 +258,8 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
         case ' ': // skip
             break;
         case ',': // skip if inside brackets
-            //break;
-           // if (!parCnt) // evaluate the stack and store in the queue
+            break;
+            if (!parCnt) // evaluate the stack and store in the queue
             {
                 while ((opCode = rpn_pop_stack()))
                 {
@@ -266,18 +278,30 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
             rpn_push_stack(bToken.t[bToken.ptr].op);
             break;
         case ')':
+        case ']':
             if (parCnt) parCnt--;
             else
                 return BasicError = BASIC_ERR_PAR_MISMATCH;
-
-            while (rpn_peek_stack_last() != '(')
+            while (rpn_peek_stack_last() != '(' && rpn_peek_stack_last() != '[')
             {
                 if (!rpn_peek_stack_last()) return BasicError = BASIC_ERR_PAR_MISMATCH;
                 if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) break;
             }
-            rpn_pop_stack(); // remove the '('
-            if (rpn_peek_stack_last() > OPCODE_MASK) if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) break; // evaluate function
+            rpn_pop_stack(); // remove the opening bracket
+            if (rpn_peek_stack_last() > OPCODE_MASK) 
+                if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE)  return BasicError; // evaluate function
             break;
+/*        case ']':
+            if (sqParCnt) sqParCnt--;
+            else
+                return BasicError = BASIC_ERR_PAR_MISMATCH;
+            while (rpn_peek_stack_last() != __OPCODE_ARRAY)
+            {
+                //if (!rpn_peek_stack_last()) return BasicError = BASIC_ERR_PAR_MISMATCH;
+                if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) return BasicError;
+            }
+            if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE)  return BasicError; // get array's element
+            break;          */  
         case '^': // ^ is evaluated right-to-left, natively to RPN, so just stack it
             rpn_push_stack(bToken.t[bToken.ptr].op);
             break;

@@ -109,7 +109,6 @@ _bas_err_e rpn_push_stack(uint8_t op)
 
 uint8_t rpn_pop_stack(void)
 {
-    // BasicError = RPNStack.ptr ? BASIC_ERR_NONE : BASIC_ERR_MISMATCH_PAR;
     return RPNStack.ptr ? RPNStack.op[--RPNStack.ptr] : 0;
 }
 
@@ -120,7 +119,6 @@ uint8_t rpn_peek_stack_last(void)
 
 void rpn_print_queue(bool newline)
 {
-    //printf("[%d]> ",RPNQueue.ptr);
     for (uint8_t i=0; i<RPNQueue.ptr; i++)
         printf("%0.2f ",RPNQueue.value[i].var.f);
     if (newline) printf("\n");
@@ -158,7 +156,7 @@ _bas_err_e rpn_eval(uint8_t op)
             BasicFunction[op - OPCODE_MASK].func(value[0]);
         else
             return BasicError = BASIC_ERR_UNKNOWN_OP;
-        return BasicError = BASIC_ERR_NONE;
+        return BasicError;
     }
     if (op != OPERATOR_NOT)
     {

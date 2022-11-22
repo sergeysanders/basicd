@@ -466,26 +466,19 @@ _bas_stat_e __dim(_rpn_type_t param)
         break;
     }
 
-    printf("Array allocated: dim0 = %d, dim1 = %d, size = %lu\n",var->param.size[0],var->param.size[1],(var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_ARRAY_BYTE) ? 1 : sizeof(var->value))));
+    //printf("Array allocated: dim0 = %d, dim1 = %d, size = %lu\n",var->param.size[0],var->param.size[1],(var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_ARRAY_BYTE) ? 1 : sizeof(var->value))));
     bToken.ptr++;
     if (bToken.t[bToken.ptr].op == '=')
     {
         if (array_set(varName,true)) return BASIC_STAT_ERR;
+        /**
         printf("Array data: ");
         for (uint16_t i=0; i < (var->param.size[0] + var->param.size[0] * var->param.size[1]); i++)
         {
             printf("0x%02x ",*(uint8_t *)(var->value.var.array + i*(var->value.type = VAR_TYPE_BYTE ? 1 : 4)));
         }
-
         printf("\n");
-
+        */
     }
-    /*
-        if (bToken.t[bToken.ptr].op != '=')
-        {
-            BasicError = BASIC_ERR_MISSING_OPERATOR;
-            return BasicStat = BASIC_STAT_ERR;
-        }
-    */
     return BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
 }
