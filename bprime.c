@@ -181,17 +181,6 @@ _bas_stat_e __input(_rpn_type_t param)
             break;
         case VAR_TYPE_STRING:
             var_set_string(var,strTmpBuff);
-            /* if(var->param.size[0] < (strlen(strTmpBuff)+1))
-             {
-                 if (var->param.size[0]) free(var->value.var.str);
-                 var->param.size[0] = strlen(strTmpBuff)+1;
-                 if ((var->value.var.str = (char *)malloc(var->param.size[0])) == NULL)
-                 {
-                     BasicError = BASIC_ERR_MEM_OUT;
-                     break;
-                 }
-             }
-             strncpy(var->value.var.str,strTmpBuff,BASIC_STRING_LEN);*/
             break;
         default:
             BasicError = BASIC_ERR_TYPE_MISMATCH; // you cannot input loop
@@ -240,10 +229,12 @@ _bas_stat_e __let(_rpn_type_t param)
         break;
     case VAR_TYPE_INTEGER:
     case VAR_TYPE_BOOL:
+    case VAR_TYPE_BYTE:
         if(tmpVar.type < VAR_TYPE_FLOAT)
             BasicError = BASIC_ERR_TYPE_MISMATCH;
         else
             var->value.var.i = (tmpVar.type == VAR_TYPE_FLOAT) ? (int32_t)tmpVar.var.f : tmpVar.var.i;
+        if (var->value.type == VAR_TYPE_BYTE) var->value.var.i &= 0xff;
         break;
     case VAR_TYPE_STRING:
         if(tmpVar.type != VAR_TYPE_STRING)
@@ -252,19 +243,6 @@ _bas_stat_e __let(_rpn_type_t param)
             break;
         }
         var_set_string(var,tmpVar.var.str);
-        /*
-        if(var->param.size[0] < (strlen(tmpVar.var.str)+1))
-        {
-            if (var->param.size) free(var->value.var.str);
-            var->param.size = strlen(tmpVar.var.str)+1;
-            if ((var->value.var.str = (char *)malloc(var->param.size)) == NULL)
-            {
-                BasicError = BASIC_ERR_MEM_OUT;
-                break;
-            }
-            //printf("\n *** Reallocate %d bytes for %s\n", var->size, var->value.var.str);
-        }
-        strncpy(var->value.var.str,tmpVar.var.str,BASIC_STRING_LEN); */
         break;
     default:
         break;
@@ -287,7 +265,8 @@ static _bas_stat_e var_get_loop(float *var)
     switch (tmpVar->type)
     {
     case VAR_TYPE_INTEGER:
-    case VAR_TYPE_BOOL:
+    //case VAR_TYPE_BOOL:
+    //case VAR_TYPE_BYTE:
         tmpVar->var.f = (float)tmpVar->var.i;
     case VAR_TYPE_FLOAT:
     case VAR_TYPE_LOOP:
@@ -439,7 +418,19 @@ _bas_stat_e __dim(_rpn_type_t param)
             BasicError = BASIC_ERR_ARRAY_DIMENTION;
         else
         {
-            size_t arraySize = var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_BYTE) ? 1 : sizeof(var->value));
+            size_t arraySize;
+            if (var->value.type == VAR_TYPE_STRING)
+            {
+                if (!var->param.size[1])
+                {
+                    BasicError = BASIC_ERR_ARRAY_DIMENTION;
+                    return BasicStat = BASIC_STAT_ERR;
+                }
+                var->param.size[1]++; // add a termination byte
+                arraySize = var->param.size[0] * var->param.size[1];
+            }
+            else 
+            arraySize = var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_BYTE) ? 1 : sizeof(var->value));
             if ((var->value.var.array = (char *)malloc(arraySize)) == NULL)
                 BasicError = BASIC_ERR_MEM_OUT;
         }
@@ -466,19 +457,11 @@ _bas_stat_e __dim(_rpn_type_t param)
         break;
     }
 
-    //printf("Array allocated: dim0 = %d, dim1 = %d, size = %lu\n",var->param.size[0],var->param.size[1],(var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_ARRAY_BYTE) ? 1 : sizeof(var->value))));
+//    printf("Array allocated: dim0 = %d, dim1 = %d, size = %lu\n",var->param.size[0],var->param.size[1],(var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_ARRAY_BYTE) ? 1 : sizeof(var->value))));
     bToken.ptr++;
     if (bToken.t[bToken.ptr].op == '=')
     {
         if (array_set(varName,true)) return BASIC_STAT_ERR;
-        /**
-        printf("Array data: ");
-        for (uint16_t i=0; i < (var->param.size[0] + var->param.size[0] * var->param.size[1]); i++)
-        {
-            printf("0x%02x ",*(uint8_t *)(var->value.var.array + i*(var->value.type = VAR_TYPE_BYTE ? 1 : 4)));
-        }
-        printf("\n");
-        */
     }
     return BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
 }

@@ -179,9 +179,10 @@ const char *bas_func_name(uint8_t opCode)
 static _bas_stat_e __array(_rpn_type_t param)
 {
     _bas_var_t *array = (rpn_peek_queue(true))->var.array; // get array
+    bool stringArray = array->value.type == VAR_TYPE_ARRAY_STRING ? true : false;
     _rpn_type_t *var[2];
 
-    if (!array->param.size[1]) // 1 or 2 dimentions
+    if (!array->param.size[1] || stringArray) // 1 or 2 dimentions
     {
         var[0] = &param;
         var[1] = 0;
@@ -192,7 +193,7 @@ static _bas_stat_e __array(_rpn_type_t param)
         var[1] = &param;
     }
     uint16_t tmpArrayPtr, arrayPtr = 0;
-    for (uint8_t i=0; i < (array->param.size[1] ? 2 : 1); i++)
+    for (uint8_t i=0; i < ((array->param.size[1] && !stringArray) ? 2 : 1); i++)
     {
         if(var[i]->type == VAR_TYPE_NONE) return BasicStat = BASIC_STAT_ERR;
         if (var[i]->type < VAR_TYPE_FLOAT)
@@ -209,13 +210,17 @@ static _bas_stat_e __array(_rpn_type_t param)
         //arrayPtr = i ? arrayPtr + array->param.size[0] * tmpArrayPtr : tmpArrayPtr;
         arrayPtr = arrayPtr*array->param.size[1] + tmpArrayPtr;
     }
-    rpn_pop_queue(); // drop the array pointer
-    /*    if(rpn_pop_queue()->type != VAR_TYPE_NONE) // there is something in stack, too much dimentions
+    //rpn_pop_queue(); // drop the array pointer
+        if(rpn_pop_queue()->type != VAR_TYPE_ARRAY) // there is something in stack, too much dimentions
         {
             BasicError = BASIC_ERR_ARRAY_DIMENTION;
             return BasicStat = BASIC_STAT_ERR;
-        }*/
-    void *data = array->value.var.array + arrayPtr*(array->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4);
+        }
+    void *data;
+    if (stringArray)
+        data = array->value.var.array + arrayPtr*array->param.size[1];
+    else
+        data = array->value.var.array + arrayPtr*(array->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4);
     switch (array->value.type)
     {
     case VAR_TYPE_ARRAY_BYTE:

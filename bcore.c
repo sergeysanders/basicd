@@ -511,12 +511,12 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
         }
         else
         {
-            //dimPtr[0] = (uint16_t)var_get_integer(dimVar);
-            //dimPtr[1] = var->param.size[1] ? (uint16_t)var_get_integer(rpn_pop_queue()) : 0;
-            dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0);
-            dimVar = rpn_pop_queue();
-            dimPtr[1] = var->param.size[1] ? (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0) : 0;
-            
+            dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
+            if (var->value.type == VAR_TYPE_ARRAY_STRING) // string array has only one dimention
+            {
+                dimVar = rpn_pop_queue();
+                dimPtr[1] = var->param.size[1] ? (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0) : 0;
+            }
             if (rpn_pop_queue()->type != VAR_TYPE_NONE)
                 BasicError = BASIC_ERR_ARRAY_DIMENTION;
             else
@@ -534,10 +534,10 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
 
     bool head = true;
     uint32_t arrayPtr = dimPtr[0] + dimPtr[1] * var->param.size[1];
-    uint32_t arrayLimit = var->param.size[0] + var->param.size[1] * var->param.size[0];
-    uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4;
+    uint32_t arrayLimit = var->param.size[0] * var->param.size[1]+((var->value.type == VAR_TYPE_ARRAY_STRING) ? 0 : var->param.size[0]);
+    uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_STRING ? var->param.size[1] : (var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4);
     void *data = var->value.var.array + arrayPtr*dSize;
-    for (; arrayPtr<arrayLimit; arrayPtr++)
+    for (; arrayPtr<arrayLimit && !BasicError; arrayPtr++)
     {
         if ((dimVar = rpn_peek_queue(head))->type == VAR_TYPE_NONE)
             break;
@@ -555,7 +555,13 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
             *(float *)data = (float)(dimVar->type & VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
             break;
         case VAR_TYPE_ARRAY_STRING:
-            *(int32_t *)data = (int32_t)dimVar->var.i;
+            if (dimVar->type != VAR_TYPE_STRING)
+            {
+                BasicError = BASIC_ERR_TYPE_MISMATCH;
+                return BasicStat = BASIC_STAT_ERR;
+            }
+            else
+                strncpy((char *)data,dimVar->var.str,var->param.size[1]-1);
             break;
         default:
             break;
