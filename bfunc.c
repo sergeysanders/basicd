@@ -33,77 +33,12 @@
 #include "bstring.h"
 #include "bfunc.h"
 #include "bprime.h"
+#include "bmath.h"
 #include "bstring.h"
 #include "berror.h"
 
-static _bas_stat_e __basic_dummy(_rpn_type_t param)
-{
-    BasicError = BASIC_ERR_UNKNOWN_FUNC;
-    return BasicStat = BASIC_STAT_ERR;
-};
-static _bas_stat_e __abs(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(param.var.f < 0 ? -param.var.f : param.var.f));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __sin(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(sinf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __cos(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(cosf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __tan(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(tanf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __atn(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(atanf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __sqr(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(sqrtf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __rnd(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(333.33));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __log(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(logf(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __deg(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(DEGREES(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __rad(_rpn_type_t param)
-{
-    rpn_push_queue(RPN_FLOAT(RADIANS(param.var.f)));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __min(_rpn_type_t param)
-{
-    _rpn_type_t p2 = *rpn_pop_queue();
-    rpn_push_queue(RPN_FLOAT(p2.var.f > param.var.f ? param.var.f : param.var.f));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __max(_rpn_type_t param)
-{
-    _rpn_type_t p2 = *rpn_pop_queue();
-    rpn_push_queue(RPN_FLOAT(p2.var.f < param.var.f ? param.var.f : param.var.f));
-    return BasicStat = BASIC_STAT_OK;
-};
-static _bas_stat_e __array(_rpn_type_t param);
+static _bas_err_e __basic_dummy(_rpn_type_t *param);
+static _bas_err_e __array(_rpn_type_t *param);
 
 const _bas_func_t BasicFunction[] =
 {
@@ -144,7 +79,9 @@ const _bas_func_t BasicFunction[] =
     /// --- string/type
     {"val$",__val$},
     {"hex$",__hex$},
+    /// --- data type
     {"int",__int},
+    {"byte",__byte},
     /// --- math
     {"abs",__abs},
     {"sin",__sin},
@@ -158,64 +95,62 @@ const _bas_func_t BasicFunction[] =
     {"rad",__rad},
     {"min",__min},
     {"max",__max},
+    /// --- logic
+    {"and#",__and},
+    {"or#",__or},
+    {"xor#",__xor},
+    {"sl#",__sl},
+    {"sr#",__sr},
     //  {NULL,NULL}
 };
 
-const uint8_t LastOpCode = (sizeof(BasicFunction) / sizeof(_bas_func_t));
 uint8_t bas_func_opcode(char *name)
 {
-    for (uint8_t fCnt = 0; fCnt < LastOpCode; fCnt++)
+    for (uint8_t fCnt = 0; fCnt < (__OPCODE_LAST - OPCODE_MASK); fCnt++)
         if (!strcmp(name,BasicFunction[fCnt].name)) return OPCODE_MASK + fCnt;
     return 0;
 }
 
 const char *bas_func_name(uint8_t opCode)
 {
-    opCode &= ~OPCODE_MASK;
-    if (opCode > LastOpCode) return "noOp";
-    return BasicFunction[opCode].name;
+    if (opCode >= __OPCODE_LAST) return "noOp";
+    return BasicFunction[opCode - OPCODE_MASK].name;
 }
 
-static _bas_stat_e __array(_rpn_type_t param)
+static _bas_err_e __basic_dummy(_rpn_type_t *param)
+{
+    BasicError = BASIC_ERR_UNKNOWN_FUNC;
+    return BasicError = BASIC_ERR_NONE;
+};
+
+
+static _bas_err_e __array(_rpn_type_t *param)
 {
     _bas_var_t *array = (rpn_peek_queue(true))->var.array; // get array
     bool stringArray = array->value.type == VAR_TYPE_ARRAY_STRING ? true : false;
     _rpn_type_t *var[2];
-
     if (!array->param.size[1] || stringArray) // 1 or 2 dimentions
     {
-        var[0] = &param;
+        var[0] = param;
         var[1] = 0;
     }
     else
     {
         var[0] = rpn_pop_queue();
-        var[1] = &param;
+        var[1] = param;
     }
     uint16_t tmpArrayPtr, arrayPtr = 0;
     for (uint8_t i=0; i < ((array->param.size[1] && !stringArray) ? 2 : 1); i++)
     {
-        if(var[i]->type == VAR_TYPE_NONE) return BasicStat = BASIC_STAT_ERR;
-        if (var[i]->type < VAR_TYPE_FLOAT)
-        {
-            BasicError = BASIC_ERR_TYPE_MISMATCH;
-            return BasicStat = BASIC_STAT_ERR;
-        }
+        if (!var[i]->type || (var[i]->type < VAR_TYPE_FLOAT)) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+
         tmpArrayPtr = (var[i]->type < VAR_TYPE_INTEGER) ? (uint16_t)var[i]->var.f : (uint16_t)var[i]->var.i;
         if (tmpArrayPtr >= array->param.size[i]) // check range
-        {
-            BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
-            return BasicStat = BASIC_STAT_ERR;
-        }
-        //arrayPtr = i ? arrayPtr + array->param.size[0] * tmpArrayPtr : tmpArrayPtr;
+            return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
         arrayPtr = arrayPtr*array->param.size[1] + tmpArrayPtr;
     }
-    //rpn_pop_queue(); // drop the array pointer
         if(rpn_pop_queue()->type != VAR_TYPE_ARRAY) // there is something in stack, too much dimentions
-        {
-            BasicError = BASIC_ERR_ARRAY_DIMENTION;
-            return BasicStat = BASIC_STAT_ERR;
-        }
+            return BasicError = BASIC_ERR_ARRAY_DIMENTION;
     void *data;
     if (stringArray)
         data = array->value.var.array + arrayPtr*array->param.size[1];
@@ -236,7 +171,7 @@ static _bas_stat_e __array(_rpn_type_t param)
         rpn_push_queue(RPN_STR(data));
         break;
     default:
-        BasicError = BASIC_ERR_TYPE_MISMATCH;
+        return BasicError = BASIC_ERR_TYPE_MISMATCH;
     }
-    return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 };

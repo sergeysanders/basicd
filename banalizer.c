@@ -198,7 +198,6 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 {
 #define RPN_PRINT_DEBUG 0
     uint8_t parCnt = opParam == '(' ? 1 : 0;
-    uint8_t sqParCnt = 0;
     uint8_t opCode;
     char *tokenStr;
     _bas_var_t *variable;
@@ -235,7 +234,6 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
                         if (rpn_push_stack('[') != BASIC_ERR_NONE) return BasicError;
                         if (rpn_push_queue(((_rpn_type_t){.type = VAR_TYPE_ARRAY,.var.array = variable})) != BASIC_ERR_NONE) return BasicError;
                         parCnt++;
-                        sqParCnt++;
                         continue;
                     }
                     else
@@ -244,7 +242,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
                 else
                 {
                     opCode = (uint8_t)*tokenStr;
-                    if ((opCode & OPCODE_MASK) && (opCode <= (LastOpCode + OPCODE_MASK))) // check that the opcode is valid
+                    if ((opCode & OPCODE_MASK) && (opCode < __OPCODE_LAST)) // check that the opcode is valid
                         rpn_push_stack((uint8_t)*tokenStr);
                     else
                         return BasicError = BASIC_ERR_UNKNOWN_VAR;
@@ -291,17 +289,6 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
             if (rpn_peek_stack_last() > OPCODE_MASK) 
                 if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE)  return BasicError; // evaluate function
             break;
-/*        case ']':
-            if (sqParCnt) sqParCnt--;
-            else
-                return BasicError = BASIC_ERR_PAR_MISMATCH;
-            while (rpn_peek_stack_last() != __OPCODE_ARRAY)
-            {
-                //if (!rpn_peek_stack_last()) return BasicError = BASIC_ERR_PAR_MISMATCH;
-                if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) return BasicError;
-            }
-            if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE)  return BasicError; // get array's element
-            break;          */  
         case '^': // ^ is evaluated right-to-left, natively to RPN, so just stack it
             rpn_push_stack(bToken.t[bToken.ptr].op);
             break;

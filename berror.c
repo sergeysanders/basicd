@@ -36,6 +36,7 @@ const char *BErrorText[BASIC_ERR_COUNT] =
     "Type mismatch",
     "Wrong usage of string var",
     "Missing parenthese",
+    "Too few arguments",
     "Missing operand",
     "Missing operator",
     "Missing \'=\'",

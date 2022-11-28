@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=Sergey Sanders
-Date                   :=22/11/2022
+Date                   :=27/11/2022
 CodeLitePath           :="/Users/sergey/Library/Application Support/CodeLite"
 LinkerName             :=clang
 SharedObjectLinkerName :=clang -shared -fPIC
@@ -62,7 +62,7 @@ AS       := llvm-as
 ## User defined environment variables
 ##
 CodeLiteDir:=/Applications/codelite.app/Contents/SharedSupport/
-Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/bprime.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/bprime.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IntermediateDirectory)/bmath.c$(ObjectSuffix) 
 
 
 
@@ -132,6 +132,11 @@ $(IntermediateDirectory)/berror.c$(ObjectSuffix): berror.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/berror.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/berror.c$(PreprocessSuffix): berror.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/berror.c$(PreprocessSuffix) berror.c
+
+$(IntermediateDirectory)/bmath.c$(ObjectSuffix): bmath.c
+	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bmath.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bmath.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/bmath.c$(PreprocessSuffix): bmath.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bmath.c$(PreprocessSuffix) bmath.c
 
 ##
 ## Clean

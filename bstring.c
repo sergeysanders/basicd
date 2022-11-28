@@ -34,51 +34,29 @@
 char strTmpBuff[BASIC_STRING_LEN];
 static char strVarBuff[BASIC_STRING_LEN];
 static char strNumBuff[16];
-_bas_stat_e __val$(_rpn_type_t param)
+_bas_err_e __val$(_rpn_type_t *param)
 {
-    sprintf(strNumBuff,"%.2f",param.var.f);
+    sprintf(strNumBuff,"%.2f",param->var.f);
     rpn_push_queue(RPN_STR(strNumBuff));
-    return BasicStat = BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 };
 
-_bas_stat_e __hex$(_rpn_type_t param)
+_bas_err_e __hex$(_rpn_type_t *param)
 {
-    sprintf(strNumBuff,"0x%8x",param.var.i);
+    sprintf(strNumBuff,(param->type == VAR_TYPE_BYTE) ? "%02x" : "%08x",param->var.i);
     rpn_push_queue(RPN_STR(strNumBuff));
-    return BasicStat = BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 };
 
-_bas_stat_e __int(_rpn_type_t param)
+_bas_err_e string_add(char *str1, char *str2)
 {
-    int intVar;
-    if (param.type < VAR_TYPE_FLOAT)
-    {
-        if (param.type == VAR_TYPE_STRING)
-            intVar = (int)strtol(param.var.str,NULL,0);
-        else
-        {
-            BasicError = BASIC_ERR_TYPE_MISMATCH;
-            return BasicStat = BASIC_STAT_OK;
-        }
-    }
-    else
-    {
-        intVar = (param.type & VAR_TYPE_INTEGER) ? param.var.i : (int)param.var.f;
-    }
-    
-    rpn_push_queue(RPN_INT(intVar));
-    return BasicStat = BASIC_STAT_OK;
-};
-
-_bas_stat_e string_add(char *str1, char *str2)
-{
-    BasicError = ((strlen(str1) + strlen(str2)) > BASIC_STRING_LEN-2) ? BASIC_ERR_STRING_LENGTH : BASIC_ERR_NONE;
+    if((strlen(str1) + strlen(str2)) > BASIC_STRING_LEN-2) return BasicError = BASIC_ERR_STRING_LENGTH;
     *strTmpBuff = '\0';
     strncpy(strTmpBuff,str1,BASIC_STRING_LEN);
     strncat(strTmpBuff,str2,BASIC_STRING_LEN);
     strncpy(strVarBuff,strTmpBuff,BASIC_STRING_LEN);
     rpn_push_queue(RPN_STR(strVarBuff));
-    return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 }
 
 _bas_err_e var_set_string(_bas_var_t *var, char *str)

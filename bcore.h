@@ -77,12 +77,12 @@ _bas_err_e prog_load(char *progFileName);
 void prog_list(void);
 void prog_new(void);
 void prog_run(uint16_t lineNum);
-_bas_stat_e __new(_rpn_type_t param);
-_bas_stat_e __list(_rpn_type_t param);
-_bas_stat_e __load(_rpn_type_t param);
-_bas_stat_e __run(_rpn_type_t param);
+_bas_err_e __new(_rpn_type_t *param);
+_bas_err_e __list(_rpn_type_t *param);
+_bas_err_e __load(_rpn_type_t *param);
+_bas_err_e __run(_rpn_type_t *param);
 
-_bas_stat_e array_set(char *name,bool init);
+_bas_err_e array_set(char *name,bool init);
 
 extern _bas_stat_e BasicStat;
 extern _bas_err_e BasicError;

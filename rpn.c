@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2022 Sergey Sanders
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -44,7 +44,7 @@
 typedef bool uint8_t;
 #endif
 
-const _rpn_type_t VarError = {.type = VAR_TYPE_NONE};
+const _rpn_type_t VarNone = {.type = VAR_TYPE_NONE,.var.i=0};
 
 struct
 {
@@ -79,7 +79,7 @@ _rpn_type_t *rpn_pop_queue(void)
     if (!RPNQueue.ptr)
     {
         BasicError = BASIC_ERR_QUEUE_EMPTY;
-        return (_rpn_type_t *)&VarError;
+        return (_rpn_type_t *)&VarNone;
     }
     BasicError = BASIC_ERR_NONE;
     return &RPNQueue.value[--RPNQueue.ptr];
@@ -92,7 +92,7 @@ _rpn_type_t *rpn_peek_queue(bool head)
     if (head) peekPtr = 0;
     if (!RPNQueue.ptr || peekPtr >= RPNQueue.ptr)
     {
-        return (_rpn_type_t *)&VarError;
+        return (_rpn_type_t *)&VarNone;
     }
     return &RPNQueue.value[peekPtr++];
 }
@@ -152,15 +152,18 @@ _bas_err_e rpn_eval(uint8_t op)
     value[0] = *rpn_pop_queue();
     if (op >= OPCODE_MASK)
     {
-        if(op < LastOpCode+OPCODE_MASK)
-            BasicFunction[op - OPCODE_MASK].func(value[0]);
+        if(op < __OPCODE_LAST)
+            return BasicFunction[op - OPCODE_MASK].func(&value[0]);
         else
             return BasicError = BASIC_ERR_UNKNOWN_OP;
-        return BasicError;
     }
+    if (value[0].type < VAR_TYPE_STRING) // arrays cannot be processed, their members only
+        return BasicError = BASIC_ERR_TYPE_MISMATCH;
     if (op != OPERATOR_NOT)
     {
         value[1] = *rpn_pop_queue();
+        if ((value[1].type < VAR_TYPE_STRING) || ((value[0].type == VAR_TYPE_STRING ? 1 : 0) ^ (value[1].type == VAR_TYPE_STRING ? 1 : 0)))
+            return BasicError = BASIC_ERR_TYPE_MISMATCH;
         if (value[0].type >= VAR_TYPE_INTEGER)
         {
             value[0].var.f = (float)value[0].var.i;
@@ -172,49 +175,11 @@ _bas_err_e rpn_eval(uint8_t op)
             value[1].type = VAR_TYPE_FLOAT;
         }
     }
-    if (BasicError) return BasicError;
     switch(op)
     {
-    // conditional equations
-    case OPERATOR_MORE:
-        value[0].var.i = ((value[1].var.f > value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_LESS:
-        value[0].var.i = ((value[1].var.f < value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_EQUAL:
-        value[0].var.i = ((value[1].var.f == value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_MORE_EQ:
-        value[0].var.i = ((value[1].var.f >= value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_NOT_EQ:
-        value[0].var.i = ((value[1].var.f != value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_LESS_EQ:
-        value[0].var.i = ((value[1].var.f <= value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_NOT:
-        value[0].var.i = (value[0].var.f ? 0 : 1);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_AND:
-        value[0].var.i = ((value[1].var.f && value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
-    case OPERATOR_OR:
-        value[0].var.i = ((value[1].var.f || value[0].var.f) ? 1 : 0);
-        value[0].type = VAR_TYPE_BOOL;
-        break;
     // Math equations
     case OPERATOR_ADD:
-        if ((value[0].type == VAR_TYPE_STRING) && (value[1].type == VAR_TYPE_STRING))
+        if (value[0].type == VAR_TYPE_STRING)
         {
             string_add(value[1].var.str,value[0].var.str);
             return BasicError;
@@ -228,21 +193,68 @@ _bas_err_e rpn_eval(uint8_t op)
         value[0].var.f = value[1].var.f * value[0].var.f;
         break;
     case OPERATOR_DIV:
-        if (!value[0].var.f) 
+        if (!value[0].var.f)
             return BasicError = BASIC_ERR_DIV_ZERO;
         value[0].var.f = value[1].var.f / value[0].var.f;
         break;
     case OPERATOR_MOD:
-        if (!value[0].var.f) 
+        if (!value[0].var.f)
             return BasicError = BASIC_ERR_DIV_ZERO;
         value[0].var.f = fmod(value[1].var.f,value[0].var.f);
+        //value[0].var.f = ((int)value[1].var.f % (int)value[0].var.f);
         break;
     case OPERATOR_PWR:
         value[0].var.f = powf(value[1].var.f,value[0].var.f);
         break;
 
     default:
-        return BasicError = BASIC_ERR_UNKNOWN_OP;
+        switch(op)
+        {
+        // conditional equations
+        case OPERATOR_MORE:
+            value[0].var.i = ((value[1].var.f > value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_LESS:
+            value[0].var.i = ((value[1].var.f < value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_EQUAL:
+            if (value[0].type == VAR_TYPE_STRING)
+            {
+                value[0].var.i = strcmp(value[1].var.str,value[0].var.str) == 0 ? 1 : 0;
+                value[0].type = VAR_TYPE_BOOL;
+            }
+            else
+                value[0].var.i = ((value[1].var.f == value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_MORE_EQ:
+            value[0].var.i = ((value[1].var.f >= value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_NOT_EQ:
+            if (value[0].type == VAR_TYPE_STRING)
+            {
+                value[0].var.i = strcmp(value[1].var.str,value[0].var.str) == 0 ? 0 : 1;
+                value[0].type = VAR_TYPE_BOOL;
+            }
+            else
+                value[0].var.i = ((value[1].var.f != value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_LESS_EQ:
+            value[0].var.i = ((value[1].var.f <= value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_NOT:
+            value[0].var.i = (value[0].var.f ? 0 : 1);
+            break;
+        case OPERATOR_AND:
+            value[0].var.i = ((value[1].var.f && value[0].var.f) ? 1 : 0);
+            break;
+        case OPERATOR_OR:
+            value[0].var.i = ((value[1].var.f || value[0].var.f) ? 1 : 0);
+            break;
+        default:
+            return BasicError = BASIC_ERR_UNKNOWN_OP;
+        }
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        value[0].type = VAR_TYPE_BOOL;
     }
     rpn_push_queue(value[0]);
     return BASIC_ERR_NONE;
@@ -253,21 +265,26 @@ _bas_err_e rpn_eval(uint8_t op)
 {
     _rpn_type_t value[2];
     bool doFloat = false;
-    //if (!op || (op == ' ')) return BASIC_ERR_NONE;
     if (!op || (op == ' ')) return BasicError = BASIC_ERR_PAR_MISMATCH;
     value[0] = *rpn_pop_queue();
     if (op >= OPCODE_MASK)
     {
-        if(op < LastOpCode+OPCODE_MASK)
+        if(op < __OPCODE_LAST)
             BasicFunction[op - OPCODE_MASK].func(value[0]);
         else
             return BasicError = BASIC_ERR_UNKNOWN_OP;
         return BasicError = BASIC_ERR_NONE;
     }
+    if (value[0].type < VAR_TYPE_STRING) // arrays cannot be processed, their members only
+        return BasicError = BASIC_ERR_TYPE_MISMATCH;
     if (op != OPERATOR_NOT)
     {
         value[1] = *rpn_pop_queue();
-        if ((value[0].type == VAR_TYPE_FLOAT) && (value[0].type == VAR_TYPE_FLOAT))
+
+        if ((value[1].type < VAR_TYPE_STRING) || ((value[0].type == VAR_TYPE_STRING) ^^ (value[1].type == VAR_TYPE_STRING)))
+            return BasicError = BASIC_ERR_TYPE_MISMATCH;
+
+        if ((value[0].type & VAR_TYPE_FLOAT) || (value[1].type & VAR_TYPE_FLOAT)) // treat as float if one of the operands is float.
         {
             doFloat = true;
             if (value[0].type > VAR_TYPE_FLOAT) value[0].var.f = (float)value[0].var.i;

@@ -20,18 +20,31 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _BSTRING_H_INCLUDED
-#define _BSTRING_H_INCLUDED
+#ifndef _BMATH_H_INCLUDED
+#define _BMATH_H_INCLUDED
 
-#include "bcore.h"
+#include "rpn.h"
+/// type
+_bas_err_e __int(_rpn_type_t *param);
+_bas_err_e __byte(_rpn_type_t *param);
+/// math
+_bas_err_e __abs(_rpn_type_t *param);
+_bas_err_e __sin(_rpn_type_t *param);
+_bas_err_e __cos(_rpn_type_t *param);
+_bas_err_e __tan(_rpn_type_t *param);
+_bas_err_e __atn(_rpn_type_t *param);
+_bas_err_e __sqr(_rpn_type_t *param);
+_bas_err_e __rnd(_rpn_type_t *param);
+_bas_err_e __log(_rpn_type_t *param);
+_bas_err_e __deg(_rpn_type_t *param);
+_bas_err_e __rad(_rpn_type_t *param);
+_bas_err_e __min(_rpn_type_t *param);
+_bas_err_e __max(_rpn_type_t *param);
 
-#define BASIC_STRING_LEN 128
+_bas_err_e __and(_rpn_type_t *p1);
+_bas_err_e __or(_rpn_type_t *p1);
+_bas_err_e __xor(_rpn_type_t *p1);
+_bas_err_e __sl(_rpn_type_t *p1);
+_bas_err_e __sr(_rpn_type_t *p1);
 
-_bas_err_e __val$(_rpn_type_t *param);
-_bas_err_e __hex$(_rpn_type_t *param);
-_bas_err_e string_add(char *str1, char *str2);
-_bas_err_e var_set_string(_bas_var_t *var, char *str);
-
-extern char strTmpBuff[BASIC_STRING_LEN];
-
-#endif //_BSTRING_H_INCLUDED
+#endif //_BMATH_H_INCLUDED

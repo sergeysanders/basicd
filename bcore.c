@@ -287,7 +287,7 @@ bool prog_add_line(uint16_t number,uint8_t **line)
     return true;
 }
 
-_bas_stat_e __new(_rpn_type_t param)
+_bas_err_e __new(_rpn_type_t *param)
 {
     /// TODO free variables and GOSUB stack
     while (BasicProg != NULL)
@@ -296,10 +296,10 @@ _bas_stat_e __new(_rpn_type_t param)
         free(BasicProg);
         BasicProg = bLnext;
     }
-    return BasicStat = BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 }
 
-_bas_stat_e __list(_rpn_type_t param)
+_bas_err_e __list(_rpn_type_t *param)
 {
     _bas_line_t *bL = BasicProg;
     while (bL != NULL)
@@ -309,10 +309,10 @@ _bas_stat_e __list(_rpn_type_t param)
         //printf("%d %s\n",bL->number,bL->string);
         bL = bL->next;
     }
-    return BasicStat = BASIC_STAT_OK;
+    return BasicError = BASIC_ERR_NONE;
 }
 
-_bas_stat_e __load(_rpn_type_t param)
+_bas_err_e __load(_rpn_type_t *param)
 {
     /** LOAD from an array
     while(*prog)
@@ -325,18 +325,13 @@ _bas_stat_e __load(_rpn_type_t param)
             return BasicError = BASIC_ERR_LOAD_DUPLICATE;
         if (!prog_add_line(ExecLine.number,&prog)) return BASIC_ERR_MEM_OUT;
     }*/
-    FILE *prog = fopen(param.var.str,"r");
-    if (prog == NULL)
-    {
-        BasicError = BASIC_ERR_FILE_NOT_FOUND;
-        return BasicStat = BASIC_STAT_ERR;
-    }
+    FILE *prog = fopen(param->var.str,"r");
+    if (prog == NULL) return BasicError = BASIC_ERR_FILE_NOT_FOUND;
     char *lineBuffer = malloc(1024);
     if (lineBuffer == NULL)
     {
         fclose(prog);
-        BasicError = BASIC_ERR_FILE_NOT_FOUND;
-        return BasicStat = BASIC_STAT_ERR;
+        return BasicError = BASIC_ERR_FILE_NOT_FOUND;
     }
     BasicError = BASIC_ERR_NONE;
     while (fgets(lineBuffer,1023,prog))
@@ -351,7 +346,8 @@ _bas_stat_e __load(_rpn_type_t param)
     }
     free(lineBuffer);
     fclose(prog);
-    return BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+
+    return BasicError;
 }
 
 _bas_stat_e basic_line_eval(void)
@@ -366,10 +362,12 @@ _bas_stat_e basic_line_eval(void)
         switch (firstOp)
         {
         case '=': // variable assignement
-            if (BasicFunction[__OPCODE_LET & ~OPCODE_MASK].func(RPN_INT(0))) return BasicStat;
+            BasicStat = BASIC_STAT_OK;
+            if (BasicFunction[__OPCODE_LET & ~OPCODE_MASK].func(&RPN_INT(0))) return BasicStat = BASIC_STAT_ERR;
+            if (BasicStat) return BasicStat; // other than error
             break;
         case '[': // array assignement
-            if (array_set(bToken.t[bToken.ptr].str,false)) return BasicStat;
+            if (array_set(bToken.t[bToken.ptr].str,false)) return BasicStat = BASIC_STAT_ERR;
             break;
         default:
             str = bToken.t[bToken.ptr].str;
@@ -383,8 +381,9 @@ _bas_stat_e basic_line_eval(void)
             if (firstOp != ':') bToken.ptr++;
             if (opCode < __OPCODE_LAST)
             {
-                if (BasicFunction[opCode & (~OPCODE_MASK)].func(RPN_INT(firstOp)))
-                    return BasicStat;
+                BasicStat = BASIC_STAT_OK;
+                if (BasicFunction[opCode & (~OPCODE_MASK)].func(&RPN_INT(firstOp))) return BasicStat = BASIC_STAT_ERR;
+                if (BasicStat) return BasicStat; // other than error
             }
 
         }
@@ -396,11 +395,11 @@ _bas_stat_e basic_line_eval(void)
     return BasicStat = BASIC_STAT_OK;
 }
 
-_bas_stat_e __run(_rpn_type_t param)
+_bas_err_e __run(_rpn_type_t *param)
 {
     _bas_line_t *bL = BasicProg;
-    if (param.var.i)
-        while (bL && (bL->number < param.var.i)) bL = bL->next; // find the executuion line (or the next one)
+    if (param->var.i)
+        while (bL && (bL->number < param->var.i)) bL = bL->next; // find the executuion line (or the next one)
     if (bL == NULL) bL = BasicProg; // start from beginning
     //if (lineNum) printf("--- Running from #%d\n",bL->number);
     ExecLine.statement = 0;
@@ -420,10 +419,10 @@ _bas_stat_e __run(_rpn_type_t param)
             {
             case BASIC_STAT_ERR:
                 printf("\n%s, %d:%d\n",BErrorText[BasicError],ExecLine.number,ExecLine.statement);
-                return BasicStat = BASIC_STAT_ERR;
+                return BasicError;
             case BASIC_STAT_STOP:
                 printf("\nStopped, %d:%d\n",ExecLine.number,ExecLine.statement);
-                return BASIC_STAT_OK;
+                return BasicError = BASIC_ERR_NONE;
             case BASIC_STAT_JUMP:
             {
                 if (bL->number == ExecLine.number) break;
@@ -431,10 +430,7 @@ _bas_stat_e __run(_rpn_type_t param)
                 while (bL && (bL->number != ExecLine.number))
                     bL = bL->next;
                 if (!bL)
-                {
-                    BasicError = BASIC_ERR_INVALID_LINE;
-                    return BasicStat = BASIC_STAT_ERR;
-                }
+                    return BasicError = BASIC_ERR_INVALID_LINE;
             }
             break;
             default:
@@ -450,41 +446,30 @@ _bas_stat_e __run(_rpn_type_t param)
         }
     }
     printf("\nDone, %d:%d\n",ExecLine.number,ExecLine.statement);
-    return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+    return BasicError;
 }
 
 _bas_err_e prog_load(char *progFileName)
 {
     _rpn_type_t fileName = {.type=VAR_TYPE_STRING,.var.str = progFileName};
-    __load(fileName);
+    __load(&fileName);
     return BasicError;
 }
 
 void prog_run(uint16_t lineNumber)
 {
     _rpn_type_t lNum = {.type=VAR_TYPE_INTEGER,.var.i = lineNumber};
-    __run(lNum);
+    __run(&lNum);
 }
 
-int32_t var_get_integer(_rpn_type_t *var)
-{
-    if(var->type & VAR_TYPE_INTEGER) return (int32_t)var->var.i;
-    if(var->type & VAR_TYPE_FLOAT) return (int32_t)var->var.f;
-    return 0;
-}
-
-_bas_stat_e array_set(char *name,bool init) // set array elements
+_bas_err_e array_set(char *name,bool init) // set array elements
 {
     uint8_t bracketCnt = 1; // count square brackets
     uint8_t i;
     uint16_t dimPtr[2] = {0,0};
     _rpn_type_t *dimVar;
     _bas_var_t *var;
-    if ((var = var_get(name)) == NULL)
-    {
-        BasicError = BASIC_ERR_UNKNOWN_VAR;
-        return BasicStat = BASIC_STAT_ERR;
-    }
+    if ((var = var_get(name)) == NULL) return BasicError = BASIC_ERR_UNKNOWN_VAR;
     if (!init)
     {
         bToken.ptr++;
@@ -498,17 +483,11 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
                 break;
             }
         }
-        if (bToken.t[i].op != ';')
-        {
-            BasicError = BASIC_ERR_PAR_MISMATCH;
-            return BasicStat = BASIC_STAT_ERR;
-        }
+        if (bToken.t[i].op != ';') return BasicError = BASIC_ERR_PAR_MISMATCH;
         token_eval_expression(0);
         bToken.ptr++;
         if ((dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE)
-        {
-            BasicError = BASIC_ERR_ARRAY_DIMENTION;
-        }
+            return BasicError = BASIC_ERR_ARRAY_DIMENTION;
         else
         {
             dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
@@ -517,32 +496,27 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
                 dimVar = rpn_pop_queue();
                 dimPtr[1] = var->param.size[1] ? (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0) : 0;
             }
-            if (rpn_pop_queue()->type != VAR_TYPE_NONE)
-                BasicError = BASIC_ERR_ARRAY_DIMENTION;
-            else
-                BasicError = BASIC_ERR_NONE; // queue is empty
+            if (rpn_pop_queue()->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
         }
         if(var->param.size[1])
         {
-            if((dimPtr[0] >= var->param.size[1]) || (dimPtr[1] >= var->param.size[0])) BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+            if((dimPtr[0] >= var->param.size[1]) || (dimPtr[1] >= var->param.size[0])) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
         }
-        else if(dimPtr[0] >= var->param.size[0]) BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+        else if(dimPtr[0] >= var->param.size[0]) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
     }
-    if (!BasicError && (bToken.t[bToken.ptr++].op != '=')) BasicError = BASIC_ERR_MISSING_EQUAL;
-    if (BasicError) return BasicStat = BASIC_STAT_ERR;
-    if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicStat = BASIC_STAT_ERR;
+    if (bToken.t[bToken.ptr++].op != '=') return BasicError = BASIC_ERR_MISSING_EQUAL;
+    if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicError;
 
     bool head = true;
     uint32_t arrayPtr = dimPtr[0] + dimPtr[1] * var->param.size[1];
     uint32_t arrayLimit = var->param.size[0] * var->param.size[1]+((var->value.type == VAR_TYPE_ARRAY_STRING) ? 0 : var->param.size[0]);
     uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_STRING ? var->param.size[1] : (var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4);
-    void *data = var->value.var.array + arrayPtr*dSize;
-    for (; arrayPtr<arrayLimit && !BasicError; arrayPtr++)
+    void *data = var->value.var.array + arrayPtr * dSize;
+    for (; arrayPtr < arrayLimit; arrayPtr++)
     {
         if ((dimVar = rpn_peek_queue(head))->type == VAR_TYPE_NONE)
             break;
         head = false;
-        /// todo: support for different types
         switch(var->value.type)
         {
         case VAR_TYPE_ARRAY_BYTE:
@@ -555,11 +529,7 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
             *(float *)data = (float)(dimVar->type & VAR_TYPE_FLOAT ? dimVar->var.f : dimVar->var.i);
             break;
         case VAR_TYPE_ARRAY_STRING:
-            if (dimVar->type != VAR_TYPE_STRING)
-            {
-                BasicError = BASIC_ERR_TYPE_MISMATCH;
-                return BasicStat = BASIC_STAT_ERR;
-            }
+            if (dimVar->type != VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
             else
                 strncpy((char *)data,dimVar->var.str,var->param.size[1]-1);
             break;
@@ -568,7 +538,6 @@ _bas_stat_e array_set(char *name,bool init) // set array elements
         }
         data += dSize;
     }
-    if (rpn_peek_queue(false)->type != VAR_TYPE_NONE)
-        BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
-    return BasicStat = BasicError ? BASIC_STAT_ERR : BASIC_STAT_OK;
+    if (rpn_peek_queue(false)->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+    return BasicError = BASIC_ERR_NONE;
 }

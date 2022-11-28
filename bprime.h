@@ -25,19 +25,19 @@
 
 #include "rpn.h"
 
-_bas_stat_e __rem(_rpn_type_t param);
-_bas_stat_e __stop(_rpn_type_t param);
-_bas_stat_e __print(_rpn_type_t param);
-_bas_stat_e __input(_rpn_type_t param);
-_bas_stat_e __let(_rpn_type_t param);
-_bas_stat_e __for(_rpn_type_t param);
-_bas_stat_e __to(_rpn_type_t param);
-_bas_stat_e __step(_rpn_type_t param);
-_bas_stat_e __next(_rpn_type_t param);
-_bas_stat_e __goto(_rpn_type_t param);
-_bas_stat_e __if(_rpn_type_t param);
-_bas_stat_e __gosub(_rpn_type_t param);
-_bas_stat_e __return(_rpn_type_t param);
-_bas_stat_e __dim(_rpn_type_t param);
+_bas_err_e __rem(_rpn_type_t *param);
+_bas_err_e __stop(_rpn_type_t *param);
+_bas_err_e __print(_rpn_type_t *param);
+_bas_err_e __input(_rpn_type_t *param);
+_bas_err_e __let(_rpn_type_t *param);
+_bas_err_e __for(_rpn_type_t *param);
+_bas_err_e __to(_rpn_type_t *param);
+_bas_err_e __step(_rpn_type_t *param);
+_bas_err_e __next(_rpn_type_t *param);
+_bas_err_e __goto(_rpn_type_t *param);
+_bas_err_e __if(_rpn_type_t *param);
+_bas_err_e __gosub(_rpn_type_t *param);
+_bas_err_e __return(_rpn_type_t *param);
+_bas_err_e __dim(_rpn_type_t *param);
 
 #endif // _BPRIME_H_INCLUDED

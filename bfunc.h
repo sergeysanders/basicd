@@ -62,6 +62,7 @@ enum
     __OPCODE_VAL$,
     __OPCODE_HEX$,
     __OPCODE_INT,
+    __OPCODE_BYTE,
     __OPCODE_ABS,
     __OPCODE_SIN,
     __OPCODE_COS,
@@ -74,6 +75,11 @@ enum
     __OPCODE_RAD,
     __OPCODE_MIN,
     __OPCODE_MAX,
+    __OPCODE_AND,
+    __OPCODE_OR,
+    __OPCODE_XOR,
+    __OPCODE_SL,
+    __OPCODE_SR,
     __OPCODE_LAST,
 };
 
@@ -89,11 +95,10 @@ typedef enum
 typedef struct
 {
     const char* name;
-    _bas_stat_e (*func)(_rpn_type_t);
+    _bas_err_e (*func)(_rpn_type_t *);
 } _bas_func_t;
 
 extern const _bas_func_t BasicFunction[];
-extern const uint8_t LastOpCode;
 
 #define bas_func_offset(name) (bas_func_opcode(name) & (~OPCODE_MASK))
 
