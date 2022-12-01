@@ -32,6 +32,8 @@
 #include "bcore.h"
 #include "bfunc.h"
 
+#include "memport.h"
+
 const struct
 {
     const char *name;
@@ -51,6 +53,7 @@ _bas_stat_e BasicStat;
 _bas_line_t *BasicProg = NULL;
 _bas_ptr_t ExecLine;
 _bas_ptr_t NextLine;
+_bas_var_t *BasicVars = NULL;
 
 uint8_t tmpBasicLine[BASIC_LINE_LEN];
 
@@ -60,9 +63,11 @@ _bas_var_t BasicConstants[] =
     {.name = "e",.next=NULL,.value.var.f = 2.71828,.value.type = VAR_TYPE_FLOAT },
 };
 
+
 _bas_var_t *var_get(char *name)
 {
-    _bas_var_t *varPtr = BasicConstants;
+    _bas_var_t *varPtr = BasicVars;//BasicConstants;
+    if (!varPtr) return NULL;
     while(1)
     {
         if (!strcmp(name,varPtr->name)) return varPtr;
@@ -72,20 +77,28 @@ _bas_var_t *var_get(char *name)
 
 _bas_var_t *var_add(char *name)
 {
-    _bas_var_t *varPtr = BasicConstants;
+    _bas_var_t *varPtr = BasicVars;// BasicConstants;
     uint8_t lastChar = name[strlen(name)-1]; // get var type: xxx - number(float),xxx$ - string, xxx# integer
-    while (varPtr->next) varPtr = varPtr->next;
     uint8_t varSize = sizeof(_bas_var_t)+(strlen(name)+1);
-    varPtr->next = malloc(varSize);
-    if (varPtr->next == NULL)
+    if (!BasicVars) // new var
     {
-        BasicError = BASIC_ERR_MEM_OUT;
-        return NULL;
+        BasicVars = pvPortMalloc(varSize);
+        varPtr = BasicVars;
     }
-    varPtr = varPtr->next;
+    else
+    {
+        while (varPtr->next) varPtr = varPtr->next;
+        varPtr->next = pvPortMalloc(varSize);
+        if (varPtr->next == NULL)
+        {
+            BasicError = BASIC_ERR_MEM_OUT;
+            return NULL;
+        }
+        varPtr = varPtr->next;
+    }
     varPtr->next = NULL; ///--- already null;
     varPtr->name = (char *)(varPtr + sizeof(_bas_var_t));
-    strcpy(varPtr->name,name);
+    strncpy(varPtr->name,name,BASIC_VAR_NAME_LEN);
     switch (lastChar)
     {
     case '$':
@@ -246,7 +259,7 @@ bool prog_add_line(uint16_t number,uint8_t **line)
     _bas_line_t *bLine = prog_find_line(number); // start new or update existing
     if (bLine == NULL) // create new
     {
-        bLine = malloc(sizeof(_bas_line_t)); // add new line;
+        bLine = pvPortMalloc(sizeof(_bas_line_t)); // add new line;
         if (bLine == NULL) return false;
         bLine->number = number;
         bLine->next = NULL;
@@ -293,7 +306,7 @@ _bas_err_e __new(_rpn_type_t *param)
     while (BasicProg != NULL)
     {
         _bas_line_t *bLnext = BasicProg->next;
-        free(BasicProg);
+        pvPortFree(BasicProg);
         BasicProg = bLnext;
     }
     return BasicError = BASIC_ERR_NONE;
@@ -327,7 +340,7 @@ _bas_err_e __load(_rpn_type_t *param)
     }*/
     FILE *prog = fopen(param->var.str,"r");
     if (prog == NULL) return BasicError = BASIC_ERR_FILE_NOT_FOUND;
-    char *lineBuffer = malloc(1024);
+    char *lineBuffer = pvPortMalloc(1024);
     if (lineBuffer == NULL)
     {
         fclose(prog);
@@ -337,6 +350,8 @@ _bas_err_e __load(_rpn_type_t *param)
     while (fgets(lineBuffer,1023,prog))
     {
         uint8_t *str = (uint8_t *)lineBuffer;
+        if (str[strlen((char *)str)-1] > '\r') // line is not terminated with \r or \n, end of file
+            strcat((char *)str,"\r");
         while ((*str == ' ') || (*str == '\t')) str++;
         if (*str < '0' ) continue; // skip lines strarting with # or control char
         if ((!BasicError) && (ExecLine.number = (uint16_t)strtol((char *)str,(char **)&str,10)) == 0) BasicError = BASIC_ERR_LOAD_NONUMBER;
@@ -344,7 +359,7 @@ _bas_err_e __load(_rpn_type_t *param)
         if ((!BasicError) && !prog_add_line(ExecLine.number,&str)) BasicError = BASIC_ERR_MEM_OUT;
         if (BasicError) break;
     }
-    free(lineBuffer);
+    pvPortFree(lineBuffer);
     fclose(prog);
 
     return BasicError;

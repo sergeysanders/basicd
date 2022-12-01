@@ -30,6 +30,7 @@
 #include "rpn.h"
 #include "banalizer.h"
 #include "bstring.h"
+#include "memport.h"
 
 char strTmpBuff[BASIC_STRING_LEN];
 static char strVarBuff[BASIC_STRING_LEN];
@@ -63,9 +64,9 @@ _bas_err_e var_set_string(_bas_var_t *var, char *str)
 {
     if(var->param.size[0] < (strlen(str)+1))
     {
-        if (var->param.size[0]) free(var->value.var.str);
+        if (var->param.size[0]) pvPortFree(var->value.var.str);
         var->param.size[0] = strlen(str)+1;
-        if ((var->value.var.str = (char *)malloc(var->param.size[0])) == NULL)
+        if ((var->value.var.str = (char *)pvPortMalloc(var->param.size[0])) == NULL)
             return BasicError = BASIC_ERR_MEM_OUT;
         //printf("\n *** Reallocate %d bytes for %s\n", var->size, var->value.var.str);
     }

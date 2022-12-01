@@ -52,16 +52,22 @@
 
 typedef enum
 {
-    VAR_TYPE_NONE,             
-    VAR_TYPE_ARRAY,             // Pointer to an array
-    VAR_TYPE_ARRAY_FLOAT = 0x08,// multi-byte variables
+    VAR_TYPE_NONE,
+    ///      Defined function
+    VAR_TYPE_DEFFN = 0x08,      // Pointer to a defined function
+    VAR_TYPE_DEFFN_STRING,      // multi-byte variables
+    VAR_TYPE_DEFFN_FLOAT,
+    VAR_TYPE_DEFFN_INTEGER,
+    VAR_TYPE_DEFFN_BYTE,   
+    VAR_TYPE_ARRAY = 0x10,      // Pointer to an array
+    VAR_TYPE_ARRAY_STRING,      // multi-byte variables
+    VAR_TYPE_ARRAY_FLOAT,
     VAR_TYPE_ARRAY_INTEGER,
     VAR_TYPE_ARRAY_BYTE,
-    VAR_TYPE_ARRAY_STRING,
-    VAR_TYPE_STRING = 0x10,     // string,  variable name ended with '$'
-    VAR_TYPE_FLOAT = 0x20,      // numeric variables
+    VAR_TYPE_STRING = 0x20,     // string,  variable name ended with '$'
+    VAR_TYPE_FLOAT = 0x40,      // numeric variables
     VAR_TYPE_LOOP,              // for loop variable, .size points to the loop descriptor  
-    VAR_TYPE_INTEGER = 0x40,    // integer, variable name ended with '#'
+    VAR_TYPE_INTEGER = 0x80,    // integer, variable name ended with '#'
     VAR_TYPE_BYTE,              // byte,  variable name ended with '_'
     VAR_TYPE_BOOL,
 } _var_type_e;

@@ -32,6 +32,7 @@
 #include "bcore.h"
 #include "bfunc.h"
 #include "bstring.h"
+#include "memport.h"
 
 struct
 {
@@ -172,7 +173,7 @@ _bas_err_e __input(_rpn_type_t *param)
 _bas_err_e __let(_rpn_type_t *param)
 {
     _bas_var_t *var;
-    _rpn_type_t tmpVar;
+    _rpn_type_t *tmpVar;
     uint8_t opParam;
     char *varName = bToken.t[bToken.ptr].str;
     BasicError = BASIC_ERR_NONE;
@@ -185,29 +186,29 @@ _bas_err_e __let(_rpn_type_t *param)
     if(token_eval_expression(opParam))
         return BasicError;
     else
-        tmpVar = *rpn_pop_queue();
+        tmpVar = rpn_pop_queue();
     switch (var->value.type)
     {
     case VAR_TYPE_FLOAT:
     case VAR_TYPE_LOOP:
-        if(tmpVar.type < VAR_TYPE_FLOAT)
+        if(tmpVar->type < VAR_TYPE_FLOAT)
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
         else
-            var->value.var.f = (tmpVar.type == VAR_TYPE_FLOAT) ? tmpVar.var.f : (float)tmpVar.var.i;
+            var->value.var.f = (tmpVar->type & VAR_TYPE_FLOAT) ? tmpVar->var.f : (float)tmpVar->var.i;
         break;
     case VAR_TYPE_INTEGER:
     case VAR_TYPE_BOOL:
     case VAR_TYPE_BYTE:
-        if(tmpVar.type < VAR_TYPE_FLOAT)
+        if(tmpVar->type < VAR_TYPE_FLOAT)
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
         else
-            var->value.var.i = (tmpVar.type == VAR_TYPE_FLOAT) ? (int32_t)tmpVar.var.f : tmpVar.var.i;
+            var->value.var.i = (tmpVar->type & VAR_TYPE_FLOAT) ? (int32_t)tmpVar->var.f : tmpVar->var.i;
         if (var->value.type == VAR_TYPE_BYTE) var->value.var.i &= 0xff;
         break;
     case VAR_TYPE_STRING:
-        if(tmpVar.type != VAR_TYPE_STRING)
+        if(tmpVar->type != VAR_TYPE_STRING)
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
-        var_set_string(var,tmpVar.var.str);
+        if (var_set_string(var,tmpVar->var.str)) return BasicError;
         break;
     default:
         break;
@@ -253,7 +254,7 @@ _bas_err_e __for(_rpn_type_t *param)
     if (var->value.type != VAR_TYPE_LOOP)
     {
         var->value.type = VAR_TYPE_LOOP;
-        if ((var->param.loop = malloc(sizeof(_bas_loop_t))) == NULL) return BasicError = BASIC_ERR_MEM_OUT;
+        if ((var->param.loop = pvPortMalloc(sizeof(_bas_loop_t))) == NULL) return BasicError = BASIC_ERR_MEM_OUT;
     }
 
     if (var_get_loop(&var->value.var.f)) return BasicError;
@@ -348,7 +349,7 @@ _bas_err_e __dim(_rpn_type_t *param)
         }
         else
             arraySize = var->param.size[0] * (var->param.size[1] ? var->param.size[1] : 1) * ((var->value.type == VAR_TYPE_BYTE) ? 1 : sizeof(var->value));
-        if ((var->value.var.array = (char *)malloc(arraySize)) == NULL) return BasicError = BASIC_ERR_MEM_OUT;
+        if ((var->value.var.array = (char *)pvPortMalloc(arraySize)) == NULL) return BasicError = BASIC_ERR_MEM_OUT;
     }
 
     switch (var->value.type)

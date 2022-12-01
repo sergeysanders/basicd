@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=Sergey Sanders
-Date                   :=27/11/2022
+Date                   :=30/11/2022
 CodeLitePath           :="/Users/sergey/Library/Application Support/CodeLite"
 LinkerName             :=clang
 SharedObjectLinkerName :=clang -shared -fPIC
@@ -62,7 +62,8 @@ AS       := llvm-as
 ## User defined environment variables
 ##
 CodeLiteDir:=/Applications/codelite.app/Contents/SharedSupport/
-Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/bprime.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IntermediateDirectory)/bmath.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/memport.c$(ObjectSuffix) $(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IntermediateDirectory)/bmath.c$(ObjectSuffix) $(IntermediateDirectory)/bprime.c$(ObjectSuffix) \
+	
 
 
 
@@ -93,6 +94,11 @@ PreBuild:
 ##
 ## Objects
 ##
+$(IntermediateDirectory)/memport.c$(ObjectSuffix): memport.c
+	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/memport.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/memport.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/memport.c$(PreprocessSuffix): memport.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/memport.c$(PreprocessSuffix) memport.c
+
 $(IntermediateDirectory)/main.c$(ObjectSuffix): main.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/main.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/main.c$(PreprocessSuffix): main.c
@@ -123,11 +129,6 @@ $(IntermediateDirectory)/bstring.c$(ObjectSuffix): bstring.c
 $(IntermediateDirectory)/bstring.c$(PreprocessSuffix): bstring.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bstring.c$(PreprocessSuffix) bstring.c
 
-$(IntermediateDirectory)/bprime.c$(ObjectSuffix): bprime.c
-	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bprime.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bprime.c$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/bprime.c$(PreprocessSuffix): bprime.c
-	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bprime.c$(PreprocessSuffix) bprime.c
-
 $(IntermediateDirectory)/berror.c$(ObjectSuffix): berror.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/berror.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/berror.c$(PreprocessSuffix): berror.c
@@ -137,6 +138,11 @@ $(IntermediateDirectory)/bmath.c$(ObjectSuffix): bmath.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bmath.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bmath.c$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/bmath.c$(PreprocessSuffix): bmath.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bmath.c$(PreprocessSuffix) bmath.c
+
+$(IntermediateDirectory)/bprime.c$(ObjectSuffix): bprime.c
+	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bprime.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bprime.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/bprime.c$(PreprocessSuffix): bprime.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bprime.c$(PreprocessSuffix) bprime.c
 
 ##
 ## Clean

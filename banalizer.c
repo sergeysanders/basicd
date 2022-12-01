@@ -138,7 +138,6 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
             }
             else
                 quoted = true;
-        case '\\':
         case '.':
         case '$': // string variable
         case '#': // integer variable
@@ -165,7 +164,12 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
             strPtr++;
             bToken.t[bToken.ptr].op = (str[strPtr] == '(' || str[strPtr] == ':') ? str[strPtr] : ' ';
             break;
-
+        case '\\':
+                if (quoted)
+                    for(uint8_t tmpPtr = strPtr; (uint8_t)str[tmpPtr] > '\r';tmpPtr++) 
+                        str[tmpPtr] = str[tmpPtr+1]; // skip the backslash
+                strPtr++;
+                break;
         default:
             if (!tokStr)str++; // remove leading spaces or unprocessed characters
             else
@@ -227,7 +231,7 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
             {
                 if ((variable = var_get(bToken.t[bToken.ptr].str)) != NULL)
                 {
-                    if (variable->value.type & VAR_TYPE_ARRAY_FLOAT) // array
+                    if (variable->value.type & VAR_TYPE_ARRAY) // array
                     {
                         if (bToken.t[bToken.ptr].op != '[') return BasicError = BASIC_ERR_PAR_MISMATCH;
                         if (rpn_push_stack(__OPCODE_ARRAY) != BASIC_ERR_NONE) return BasicError;

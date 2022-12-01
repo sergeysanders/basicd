@@ -143,11 +143,10 @@ void rpn_purge_stack(void)
     RPNStack.ptr = 0;
 }
 
-#if 1 // short eval
 _bas_err_e rpn_eval(uint8_t op)
 {
     _rpn_type_t value[2];
-    //if (!op || (op == ' ')) return BASIC_ERR_NONE;
+    bool doFloat;
     if (!op || (op == ' ')) return BasicError = BASIC_ERR_PAR_MISMATCH;
     value[0] = *rpn_pop_queue();
     if (op >= OPCODE_MASK)
@@ -164,15 +163,19 @@ _bas_err_e rpn_eval(uint8_t op)
         value[1] = *rpn_pop_queue();
         if ((value[1].type < VAR_TYPE_STRING) || ((value[0].type == VAR_TYPE_STRING ? 1 : 0) ^ (value[1].type == VAR_TYPE_STRING ? 1 : 0)))
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
-        if (value[0].type >= VAR_TYPE_INTEGER)
+        if ((value[0].type & VAR_TYPE_FLOAT) || (value[1].type & VAR_TYPE_FLOAT)) // treat as float if one of the operands is float.
         {
-            value[0].var.f = (float)value[0].var.i;
-            value[0].type = VAR_TYPE_FLOAT;
-        }
-        if (value[1].type >= VAR_TYPE_INTEGER)
-        {
-            value[1].var.f = (float)value[1].var.i;
-            value[1].type = VAR_TYPE_FLOAT;
+            doFloat = true;
+            if (value[0].type & VAR_TYPE_INTEGER) 
+                {
+                    value[0].var.f = (float)value[0].var.i;
+                    value[0].type = VAR_TYPE_FLOAT;
+                }
+            if (value[1].type & VAR_TYPE_INTEGER) 
+                {
+                    value[1].var.f = (float)value[1].var.i;
+                    value[1].type = VAR_TYPE_FLOAT;
+                }
         }
     }
     switch(op)
@@ -184,27 +187,45 @@ _bas_err_e rpn_eval(uint8_t op)
             string_add(value[1].var.str,value[0].var.str);
             return BasicError;
         }
-        value[0].var.f = value[1].var.f + value[0].var.f;
+        if (doFloat)
+            value[0].var.f = value[1].var.f + value[0].var.f;
+        else
+            value[0].var.i = value[1].var.i + value[0].var.i;
         break;
     case OPERATOR_SUB:
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
         value[0].var.f = value[1].var.f - value[0].var.f;
         break;
     case OPERATOR_MUL:
-        value[0].var.f = value[1].var.f * value[0].var.f;
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        if (doFloat)
+            value[0].var.f = value[1].var.f * value[0].var.f;
+        else
+            value[0].var.i = value[1].var.i * value[0].var.i;
         break;
     case OPERATOR_DIV:
-        if (!value[0].var.f)
-            return BasicError = BASIC_ERR_DIV_ZERO;
-        value[0].var.f = value[1].var.f / value[0].var.f;
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        if (!value[0].var.f) return BasicError = BASIC_ERR_DIV_ZERO;
+        if (doFloat)
+            value[0].var.f = value[1].var.f / value[0].var.f;
+        else
+            value[0].var.i = value[1].var.i / value[0].var.i;
         break;
     case OPERATOR_MOD:
-        if (!value[0].var.f)
-            return BasicError = BASIC_ERR_DIV_ZERO;
-        value[0].var.f = fmod(value[1].var.f,value[0].var.f);
-        //value[0].var.f = ((int)value[1].var.f % (int)value[0].var.f);
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        if (!value[0].var.f) return BasicError = BASIC_ERR_DIV_ZERO;
+        if (doFloat)
+            value[0].var.f = value[1].var.f / value[0].var.f;
+        else
+            value[0].var.i = value[1].var.i % value[0].var.i;
         break;
     case OPERATOR_PWR:
-        value[0].var.f = powf(value[1].var.f,value[0].var.f);
+        if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        if (doFloat)
+            value[0].var.f = powf(value[1].var.f,value[0].var.f);
+        else
+            value[0].var.i = pow(value[1].var.i,value[0].var.i);
+
         break;
 
     default:
@@ -212,10 +233,14 @@ _bas_err_e rpn_eval(uint8_t op)
         {
         // conditional equations
         case OPERATOR_MORE:
+            if (doFloat)
             value[0].var.i = ((value[1].var.f > value[0].var.f) ? 1 : 0);
+            else value[0].var.i = ((value[1].var.i > value[0].var.i) ? 1 : 0);
             break;
         case OPERATOR_LESS:
+        if (doFloat)
             value[0].var.i = ((value[1].var.f < value[0].var.f) ? 1 : 0);
+            else value[0].var.i = ((value[1].var.i < value[0].var.i) ? 1 : 0);
             break;
         case OPERATOR_EQUAL:
             if (value[0].type == VAR_TYPE_STRING)
@@ -224,10 +249,16 @@ _bas_err_e rpn_eval(uint8_t op)
                 value[0].type = VAR_TYPE_BOOL;
             }
             else
+            {
+                if (doFloat)
                 value[0].var.i = ((value[1].var.f == value[0].var.f) ? 1 : 0);
+            else value[0].var.i = ((value[1].var.i == value[0].var.i) ? 1 : 0);                
+            }
             break;
         case OPERATOR_MORE_EQ:
+            if (doFloat)
             value[0].var.i = ((value[1].var.f >= value[0].var.f) ? 1 : 0);
+            else value[0].var.i = ((value[1].var.i >= value[0].var.i) ? 1 : 0);            
             break;
         case OPERATOR_NOT_EQ:
             if (value[0].type == VAR_TYPE_STRING)
@@ -236,10 +267,16 @@ _bas_err_e rpn_eval(uint8_t op)
                 value[0].type = VAR_TYPE_BOOL;
             }
             else
+            {
+                if (doFloat)
                 value[0].var.i = ((value[1].var.f != value[0].var.f) ? 1 : 0);
+                else value[0].var.i = ((value[1].var.i != value[0].var.i) ? 1 : 0);
+            }
             break;
         case OPERATOR_LESS_EQ:
+        if (doFloat)
             value[0].var.i = ((value[1].var.f <= value[0].var.f) ? 1 : 0);
+            else value[0].var.i = ((value[1].var.i <= value[0].var.i) ? 1 : 0);
             break;
         case OPERATOR_NOT:
             value[0].var.i = (value[0].var.f ? 0 : 1);
@@ -248,6 +285,7 @@ _bas_err_e rpn_eval(uint8_t op)
             value[0].var.i = ((value[1].var.f && value[0].var.f) ? 1 : 0);
             break;
         case OPERATOR_OR:
+        if (doFloat)
             value[0].var.i = ((value[1].var.f || value[0].var.f) ? 1 : 0);
             break;
         default:
@@ -259,136 +297,3 @@ _bas_err_e rpn_eval(uint8_t op)
     rpn_push_queue(value[0]);
     return BASIC_ERR_NONE;
 }
-
-#else // fast eval
-_bas_err_e rpn_eval(uint8_t op)
-{
-    _rpn_type_t value[2];
-    bool doFloat = false;
-    if (!op || (op == ' ')) return BasicError = BASIC_ERR_PAR_MISMATCH;
-    value[0] = *rpn_pop_queue();
-    if (op >= OPCODE_MASK)
-    {
-        if(op < __OPCODE_LAST)
-            BasicFunction[op - OPCODE_MASK].func(value[0]);
-        else
-            return BasicError = BASIC_ERR_UNKNOWN_OP;
-        return BasicError = BASIC_ERR_NONE;
-    }
-    if (value[0].type < VAR_TYPE_STRING) // arrays cannot be processed, their members only
-        return BasicError = BASIC_ERR_TYPE_MISMATCH;
-    if (op != OPERATOR_NOT)
-    {
-        value[1] = *rpn_pop_queue();
-
-        if ((value[1].type < VAR_TYPE_STRING) || ((value[0].type == VAR_TYPE_STRING) ^^ (value[1].type == VAR_TYPE_STRING)))
-            return BasicError = BASIC_ERR_TYPE_MISMATCH;
-
-        if ((value[0].type & VAR_TYPE_FLOAT) || (value[1].type & VAR_TYPE_FLOAT)) // treat as float if one of the operands is float.
-        {
-            doFloat = true;
-            if (value[0].type > VAR_TYPE_FLOAT) value[0].var.f = (float)value[0].var.i;
-            if (value[1].type > VAR_TYPE_FLOAT) value[1].var.f = (float)value[1].var.i;
-        }
-    }
-    if (BasicError) return BasicError;
-    switch(op)
-    {
-    // conditional equations
-    case OPERATOR_MORE:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f > value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i > value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_LESS:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f < value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i < value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_EQUAL:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f == value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i == value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_MORE_EQ:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f >= value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i >= value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_NOT_EQ:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f != value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i != value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_LESS_EQ:
-        if (doFloat)
-            value[0].var.i = ((value[1].var.f <= value[0].var.f) ? 1 : 0);
-        else
-            value[0].var.i = ((value[1].var.i <= value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_NOT:
-        value[0].var.i = (value[0].var.i ? 1 : 0);
-        break;
-    case OPERATOR_AND:
-        value[0].var.i = ((value[1].var.i && value[0].var.i) ? 1 : 0);
-        break;
-    case OPERATOR_OR:
-        value[0].var.i = ((value[1].var.i || value[0].var.i) ? 1 : 0);
-        break;
-    // Math equations
-    case OPERATOR_ADD:
-        if ((value[0].type == VAR_TYPE_STRING) && (value[1].type == VAR_TYPE_STRING))
-        {
-            string_add(value[1].var.str,value[0].var.str);
-            return BasicError;
-        }
-        if (doFloat)
-            value[0].var.f = value[1].var.f + value[0].var.f;
-        else
-            value[0].var.i = value[1].var.i + value[0].var.i;
-        break;
-    case OPERATOR_SUB:
-        if (doFloat)
-            value[0].var.f = value[1].var.f - value[0].var.f;
-        else
-            value[0].var.i = value[1].var.i - value[0].var.i;
-        break;
-    case OPERATOR_MUL:
-        if (doFloat)
-            value[0].var.f = value[1].var.f * value[0].var.f;
-        else
-            value[0].var.i = value[1].var.i * value[0].var.i;
-        break;
-    case OPERATOR_DIV:
-        if (!value[0].var.f) return BASIC_ERR_DIV_ZERO;
-        if (doFloat)
-            value[0].var.f = value[1].var.f / value[0].var.f;
-        else
-            value[0].var.i = value[1].var.i / value[0].var.i;
-        break;
-    case OPERATOR_MOD:
-        if (!value[0].var.f) return BASIC_ERR_DIV_ZERO;
-        if (doFloat)
-            value[0].var.f = fmod(value[1].var.f,value[0].var.f);
-        else
-            value[0].var.i = value[1].var.i % value[0].var.i;
-        break;
-    case OPERATOR_PWR:
-        if (doFloat)
-            value[0].var.f = powf(value[1].var.f,value[0].var.f);
-        else
-            value[0].var.i = pow(value[1].var.i,value[0].var.i);
-        break;
-
-    default:
-        return BasicError = BASIC_ERR_UNKNOWN_OP;
-    }
-    rpn_push_queue(value[0]);
-    return BASIC_ERR_NONE;
-}
-#endif
