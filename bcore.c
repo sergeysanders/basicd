@@ -421,6 +421,12 @@ _bas_err_e __run(_rpn_type_t *param)
     while (bL)
     {
         tokenizer((char *)bL->string);
+#if 0 // Print tokenized strings
+        for (uint8_t i=0;i<PARSER_MAX_TOKENS && bToken.t[i].op;i++)
+        {
+            printf("%s,%c\n",bToken.t[i].str,bToken.t[i].op);
+        }
+#endif
         if (ExecLine.statement) // same line for/next implementation
             for (uint8_t s=0; s < ExecLine.statement && bToken.t[bToken.ptr].op ; s++)
                 while (bToken.t[bToken.ptr++].op != ':')

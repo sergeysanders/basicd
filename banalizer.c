@@ -207,7 +207,8 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
     _bas_var_t *variable;
     BasicError = BASIC_ERR_NONE;
     rpn_purge_queue();
-    if ((opParam == '(') || (opParam == '!')) rpn_push_stack(opParam); // bracket from primary operator
+    if ((opParam == '(') || (opParam == '!')) 
+        rpn_push_stack(opParam); // bracket from primary operator
     for (; bToken.ptr<PARSER_MAX_TOKENS; bToken.ptr++)
     {
         tokenStr = bToken.t[bToken.ptr].str;
