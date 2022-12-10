@@ -64,6 +64,9 @@ struct
     .ptr = 0
 };
 
+static uint8_t peekPtr = 0;
+static uint8_t peekLast = 0;
+
 _bas_err_e rpn_push_queue(_rpn_type_t value)
 {
     if (RPNQueue.ptr < RPN_QUEUE_LEN-1)
@@ -74,7 +77,7 @@ _bas_err_e rpn_push_queue(_rpn_type_t value)
     return BasicError = BASIC_ERR_QUEUE_FULL;
 }
 
-_rpn_type_t *rpn_pop_queue(void)
+_rpn_type_t *rpn_pull_queue(void)
 {
     if (!RPNQueue.ptr)
     {
@@ -85,12 +88,34 @@ _rpn_type_t *rpn_pop_queue(void)
     return &RPNQueue.value[--RPNQueue.ptr];
 }
 
+bool rpn_find_queue(_var_type_e varType)
+{
+    BasicError = BASIC_ERR_NONE;
+    if (!RPNQueue.ptr) return false;
+    peekPtr = RPNQueue.ptr;
+    do
+    {
+        if(RPNQueue.value[--peekPtr].type == varType) 
+            {
+                peekLast = RPNQueue.ptr;
+                RPNQueue.ptr = peekPtr; // queue data after requested value will be taken by peek_queue
+                return true;
+            }
+    }
+    while (peekPtr);
+    return false;
+}
+
 _rpn_type_t *rpn_peek_queue(bool head)
 {
-    static uint8_t peekPtr = 0;
     BasicError = BASIC_ERR_NONE;
-    if (head) peekPtr = 0;
-    if (!RPNQueue.ptr || peekPtr >= RPNQueue.ptr)
+    if (head) 
+    {
+        peekPtr = 0;
+        peekLast = RPNQueue.ptr;
+        RPNQueue.ptr = 0; // flush queue, the data will be read by peek_queue
+    }
+    if (peekPtr >= peekLast)
     {
         return (_rpn_type_t *)&VarNone;
     }
@@ -167,7 +192,7 @@ _bas_err_e rpn_eval(uint8_t op)
     _rpn_type_t value[2];
     bool doFloat = false;
     if (!op || (op == ' ')) return BasicError = BASIC_ERR_PAR_MISMATCH;
-    value[0] = *rpn_pop_queue();
+    if (op < __OPCODE_ARRAY) value[0] = *rpn_pull_queue(); // arrays and deffn have variable number of params
     if (op >= OPCODE_MASK)
     {
         if(op < __OPCODE_LAST)
@@ -175,11 +200,11 @@ _bas_err_e rpn_eval(uint8_t op)
         else
             return BasicError = BASIC_ERR_UNKNOWN_OP;
     }
-    if (value[0].type < VAR_TYPE_STRING) // arrays cannot be processed, their members only
+    if (value[0].type & VAR_TYPE_ARRAY) // arrays cannot be processed, their members only
         return BasicError = BASIC_ERR_TYPE_MISMATCH;
     if (op != OPERATOR_NOT)
     {
-        value[1] = *rpn_pop_queue();
+        value[1] = *rpn_pull_queue();
         if ((value[1].type < VAR_TYPE_STRING) || ((value[0].type == VAR_TYPE_STRING ? 1 : 0) ^ (value[1].type == VAR_TYPE_STRING ? 1 : 0)))
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
         if ((value[0].type & VAR_TYPE_FLOAT) || (value[1].type & VAR_TYPE_FLOAT)) // treat as float if one of the operands is float.
@@ -187,13 +212,15 @@ _bas_err_e rpn_eval(uint8_t op)
             doFloat = true;
             if (value[0].type & VAR_TYPE_INTEGER)
             {
-                value[0].var.f = (float)value[0].var.i;
-                value[0].type = VAR_TYPE_FLOAT;
+                value[0] = RPN_FLOAT(value[0].var.i);
+//                value[0].var.f = (float)value[0].var.i;
+//                value[0].type = VAR_TYPE_FLOAT;
             }
             if (value[1].type & VAR_TYPE_INTEGER)
             {
-                value[1].var.f = (float)value[1].var.i;
-                value[1].type = VAR_TYPE_FLOAT;
+                value[1] = RPN_FLOAT(value[1].var.i);
+//                value[1].var.f = (float)value[1].var.i;
+//                value[1].type = VAR_TYPE_FLOAT;
             }
         }
     }
@@ -314,5 +341,5 @@ _bas_err_e rpn_eval(uint8_t op)
         value[0].type = VAR_TYPE_BOOL;
     }
     rpn_push_queue(value[0]);
-    return BASIC_ERR_NONE;
+    return BasicError = BASIC_ERR_NONE;
 }

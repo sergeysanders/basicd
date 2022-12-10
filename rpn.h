@@ -82,6 +82,7 @@ typedef struct
         uint32_t    w;
         char*       str;
         void*       array;
+        void*       deffn;
     } var;
 } _rpn_type_t;
 
@@ -91,8 +92,9 @@ typedef struct
 #define RPN_STR(x)      ((_rpn_type_t){.type = VAR_TYPE_STRING,.var.str = x})
 
 _bas_err_e rpn_push_queue(_rpn_type_t var);
-_rpn_type_t *rpn_pop_queue(void);
+_rpn_type_t *rpn_pull_queue(void);
 _rpn_type_t *rpn_peek_queue(bool head);
+bool rpn_find_queue(_var_type_e varType);
 
 _bas_err_e rpn_push_stack(uint8_t op);
 uint8_t rpn_pop_stack(void);

@@ -39,5 +39,6 @@ _bas_err_e __if(_rpn_type_t *param);
 _bas_err_e __gosub(_rpn_type_t *param);
 _bas_err_e __return(_rpn_type_t *param);
 _bas_err_e __dim(_rpn_type_t *param);
+_bas_err_e __def(_rpn_type_t *param);
 
 #endif // _BPRIME_H_INCLUDED

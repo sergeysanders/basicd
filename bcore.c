@@ -229,7 +229,6 @@ uint8_t *basic_line_preprocess(uint8_t *line) /// look for a function name and r
                     opCode = bas_func_opcode("print");
                 else
                     opCode = bas_func_opcode((char *)&tmpBasicLine[tail]);
-
             }
             if (opCode) // reserved name found
             {
@@ -319,7 +318,7 @@ _bas_err_e __list(_rpn_type_t *param)
     {
         if (bL->number)
             printf("%d %s\n",bL->number,basic_line_totext(bL->string));
-        //printf("%d %s\n",bL->number,bL->string);
+        //    printf("%d %s\n",bL->number,bL->string);
         bL = bL->next;
     }
     return BasicError = BASIC_ERR_NONE;
@@ -372,8 +371,8 @@ _bas_stat_e basic_line_eval(void)
 
     while (1)
     {
-        if(!*bToken.t[bToken.ptr].str && !bToken.t[bToken.ptr].op) return BasicStat = BASIC_STAT_SKIP; // empty line (rem found)
-        firstOp = bToken.t[bToken.ptr].op;
+        if(!*bToken->t[bToken->ptr].str && !bToken->t[bToken->ptr].op) return BasicStat = BASIC_STAT_SKIP; // empty line (rem found)
+        firstOp = bToken->t[bToken->ptr].op;
         switch (firstOp)
         {
         case '=': // variable assignement
@@ -382,18 +381,18 @@ _bas_stat_e basic_line_eval(void)
             if (BasicStat) return BasicStat; // other than error
             break;
         case '[': // array assignement
-            if (array_set(bToken.t[bToken.ptr].str,false)) return BasicStat = BASIC_STAT_ERR;
+            if (array_set(bToken->t[bToken->ptr].str,false)) return BasicStat = BASIC_STAT_ERR;
             break;
         default:
-            str = bToken.t[bToken.ptr].str;
+            str = bToken->t[bToken->ptr].str;
             if (*str == '\'') *str = (char)__OPCODE_REM;
             if((uint8_t)*str < OPCODE_MASK)
             {
                 BasicError = BASIC_ERR_UNKNOWN_FUNC;
                 return BasicStat = BASIC_STAT_ERR;
             }
-            uint8_t opCode = *bToken.t[bToken.ptr].str;
-            if (firstOp != ':') bToken.ptr++;
+            uint8_t opCode = *bToken->t[bToken->ptr].str;
+            if (firstOp != ':') bToken->ptr++;
             if (opCode < __OPCODE_LAST)
             {
                 BasicStat = BASIC_STAT_OK;
@@ -402,10 +401,10 @@ _bas_stat_e basic_line_eval(void)
             }
 
         }
-        if (bToken.t[bToken.ptr].op == ':')
+        if (bToken->t[bToken->ptr].op == ':')
             ExecLine.statement ++;
-        else if (!bToken.t[bToken.ptr].op || ((uint8_t)*bToken.t[bToken.ptr].str != __OPCODE_THEN)) return BasicStat = BASIC_STAT_OK;
-        bToken.ptr++;
+        else if (!bToken->t[bToken->ptr].op || ((uint8_t)*bToken->t[bToken->ptr].str != __OPCODE_THEN)) return BasicStat = BASIC_STAT_OK;
+        bToken->ptr++;
     }
     return BasicStat = BASIC_STAT_OK;
 }
@@ -422,15 +421,16 @@ _bas_err_e __run(_rpn_type_t *param)
     {
         tokenizer((char *)bL->string);
 #if 0 // Print tokenized strings
-        for (uint8_t i=0;i<PARSER_MAX_TOKENS && bToken.t[i].op;i++)
+        for (uint8_t i=0;i<PARSER_MAX_TOKENS;i++)
         {
-            printf("%s,%c\n",bToken.t[i].str,bToken.t[i].op);
+            printf("\"%s\", \'%c\'\n",bToken->t[i].str,bToken->t[i].op);
+            if (!bToken->t[i].op) break;
         }
 #endif
         if (ExecLine.statement) // same line for/next implementation
-            for (uint8_t s=0; s < ExecLine.statement && bToken.t[bToken.ptr].op ; s++)
-                while (bToken.t[bToken.ptr++].op != ':')
-                    if (!bToken.t[bToken.ptr].op) break;
+            for (uint8_t s=0; s < ExecLine.statement && bToken->t[bToken->ptr].op ; s++)
+                while (bToken->t[bToken->ptr++].op != ':')
+                    if (!bToken->t[bToken->ptr].op) break;
 
         ExecLine.number = bL->number;
         NextLine.number = bL->next ? ((_bas_line_t *)bL->next)->number : 0;
@@ -493,31 +493,31 @@ _bas_err_e array_set(char *name,bool init) // set array elements
     if ((var = var_get(name)) == NULL) return BasicError = BASIC_ERR_UNKNOWN_VAR;
     if (!init)
     {
-        bToken.ptr++;
-        for (i=bToken.ptr; i < PARSER_MAX_TOKENS-1 && bToken.t[i].op; i++)
+        bToken->ptr++;
+        for (i=bToken->ptr; i < PARSER_MAX_TOKENS-1 && bToken->t[i].op; i++)
         {
-            if (bToken.t[i].op == '[') bracketCnt++;
-            if (bToken.t[i].op == ']') bracketCnt--;
+            if (bToken->t[i].op == '[') bracketCnt++;
+            if (bToken->t[i].op == ']') bracketCnt--;
             if (!bracketCnt)
             {
-                bToken.t[i].op = ';';// set delimeter for token evaluation
+                bToken->t[i].op = ';';// set delimeter for token evaluation
                 break;
             }
         }
-        if (bToken.t[i].op != ';') return BasicError = BASIC_ERR_PAR_MISMATCH;
+        if (bToken->t[i].op != ';') return BasicError = BASIC_ERR_PAR_MISMATCH;
         token_eval_expression(0);
-        bToken.ptr++;
-        if ((dimVar = rpn_pop_queue())->type == VAR_TYPE_NONE)
+        bToken->ptr++;
+        if ((dimVar = rpn_pull_queue())->type == VAR_TYPE_NONE)
             return BasicError = BASIC_ERR_ARRAY_DIMENTION;
         else
         {
             dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
             if (var->value.type == VAR_TYPE_ARRAY_STRING) // string array has only one dimention
             {
-                dimVar = rpn_pop_queue();
+                dimVar = rpn_pull_queue();
                 dimPtr[1] = var->param.size[1] ? (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.i : 0) : 0;
             }
-            if (rpn_pop_queue()->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
+            if (rpn_pull_queue()->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
         }
         if(var->param.size[1])
         {
@@ -525,7 +525,7 @@ _bas_err_e array_set(char *name,bool init) // set array elements
         }
         else if(dimPtr[0] >= var->param.size[0]) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
     }
-    if (bToken.t[bToken.ptr++].op != '=') return BasicError = BASIC_ERR_MISSING_EQUAL;
+    if (bToken->t[bToken->ptr++].op != '=') return BasicError = BASIC_ERR_MISSING_EQUAL;
     if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicError;
 
     bool head = true;

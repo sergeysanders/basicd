@@ -37,7 +37,18 @@
  * https://rosettacode.org/wiki/Parsing/Shunting-yard_algorithm
 */
 
-struct _bas_token bToken;
+_bas_token_t bLineTokBuff[PARSER_MAX_TOKENS];
+_bas_tok_list_t bLineToken = {.t=bLineTokBuff};
+_bas_tok_list_t *bToken = &bLineToken;
+#define TOKEN_STACK_DEPTH   8
+struct
+{
+    _bas_tok_list_t *tokens[TOKEN_STACK_DEPTH];
+    uint8_t ptr;
+} tList =
+{
+    .ptr = 0,
+};
 
 const struct
 {
@@ -65,6 +76,21 @@ const struct
     {0}
 };
 
+bool tok_list_push(_bas_tok_list_t *tokensList)
+{
+    if (tList.ptr >= TOKEN_STACK_DEPTH) return false;
+    tList.tokens[tList.ptr++] = bToken;
+    bToken = tokensList;
+    return true;
+}
+
+bool tok_list_pull(void)
+{
+    if (tList.ptr == 0) return false;
+    bToken = tList.tokens[--tList.ptr];
+    return true;
+}
+
 static char get_precedence(uint8_t opCode)
 {
     if (opCode > 0x80) return 6;
@@ -74,7 +100,7 @@ static char get_precedence(uint8_t opCode)
     return -1;
 }
 
-bool tokenizer(char *str) // return false if total number of bToken.ts is greater than PARSER_MAX_bToken.tS, otherwise true
+bool tokenizer(char *str) // return false if total number of bLineToken.ts is greater than PARSER_MAX_bToken->tS, otherwise true
 {
     static char tokenString[BASIC_LINE_LEN];
     uint8_t strPtr = 0;
@@ -85,8 +111,8 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
 
     strncpy(tokenString,str,BASIC_LINE_LEN);
     str = tokenString;
-    bToken.ptr = 0;
-    bToken.t[bToken.ptr].op = 0;
+    bLineToken.ptr = 0;
+    bLineToken.t[bLineToken.ptr].op = 0;
     while (!done)
     {
         switch ((uint8_t)str[strPtr])
@@ -103,7 +129,7 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
             done = true;
             quoted = false;
         case '-':
-            if (!done && (strPtr == 0))// || (*str & OPCODE_MASK))) // negative number
+            if (!done && ((strPtr == 0) || (isdigit(str[strPtr-2]) && ((str[strPtr-1] == 'E') || (str[strPtr-1] == 'e')))))// || (*str & OPCODE_MASK))) // negative number or exponent sign
             {
                 strPtr++;
                 break;
@@ -124,7 +150,7 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
             if (quoted)
                 strPtr++;
             else
-                bToken.t[bToken.ptr].op = done ? 0x01 : str[strPtr];
+                bLineToken.t[bLineToken.ptr].op = done ? 0x01 : str[strPtr];
             break;
         case '"': // process quoted string
             if (quoted)
@@ -149,27 +175,27 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
         case FUNC_TYPE_SECONDARY ... 0xff:
             tokStr = true;
             if (trSpace) // second statement
-                bToken.t[bToken.ptr].op = ' ';
+                bLineToken.t[bLineToken.ptr].op = ' ';
             else strPtr++;
             break;
 
         case FUNC_TYPE_PRIMARY ... (FUNC_TYPE_SECONDARY-1):
             if (trSpace) // there is non terminated operand
             {
-                bToken.t[bToken.ptr].op = ' ';
+                bLineToken.t[bLineToken.ptr].op = ' ';
                 strPtr--;
                 break;
             }
 
             strPtr++;
-            bToken.t[bToken.ptr].op = (str[strPtr] == '(' || str[strPtr] == ':') ? str[strPtr] : ' ';
+            bLineToken.t[bLineToken.ptr].op = (str[strPtr] == '(' || str[strPtr] == ':') ? str[strPtr] : ' ';
             break;
         case '\\':
-                if (quoted)
-                    for(uint8_t tmpPtr = strPtr; (uint8_t)str[tmpPtr] > '\r';tmpPtr++) 
-                        str[tmpPtr] = str[tmpPtr+1]; // skip the backslash
-                strPtr++;
-                break;
+            if (quoted)
+                for(uint8_t tmpPtr = strPtr; (uint8_t)str[tmpPtr] > '\r'; tmpPtr++)
+                    str[tmpPtr] = str[tmpPtr+1]; // skip the backslash
+            strPtr++;
+            break;
         default:
             if (!tokStr)str++; // remove leading spaces or unprocessed characters
             else
@@ -182,37 +208,45 @@ bool tokenizer(char *str) // return false if total number of bToken.ts is greate
                 strPtr++;
             }
         }
-        if (bToken.t[bToken.ptr].op)
+        if (bLineToken.t[bLineToken.ptr].op)
         {
-            if(done) bToken.t[bToken.ptr].op = '\0';
-            bToken.t[bToken.ptr++].str = str;
+            if(done) bLineToken.t[bLineToken.ptr].op = '\0';
+            bLineToken.t[bLineToken.ptr++].str = str;
             str[strPtr++] = 0;
             str = &str[strPtr];
             strPtr = 0;
             tokStr = trSpace = quoted = false;
-            bToken.t[bToken.ptr].op = '\0';
+            bLineToken.t[bLineToken.ptr].op = '\0';
         }
-        if (bToken.ptr >= PARSER_MAX_TOKENS) return false;
+        if (bLineToken.ptr >= PARSER_MAX_TOKENS) return false;
     }
-    bToken.ptr = 0;
+    bLineToken.ptr = 0;
     return true;
 }
 
 _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the will evaluate the first bracked expression, including function
 {
 #define RPN_PRINT_DEBUG 0
-    uint8_t parCnt = opParam == '(' ? 1 : 0;
     uint8_t opCode;
     char *tokenStr;
     _bas_var_t *variable;
+    bToken->parCnt = opParam == '(' ? 1 : 0;
+
     BasicError = BASIC_ERR_NONE;
     rpn_purge_queue();
-    if ((opParam == '(') || (opParam == '!')) 
+    if ((opParam == '(') || (opParam == '!'))
         rpn_push_stack(opParam); // bracket from primary operator
-    for (; bToken.ptr<PARSER_MAX_TOKENS; bToken.ptr++)
+
+    for (; bToken->ptr<PARSER_MAX_TOKENS; bToken->ptr++)
     {
-        tokenStr = bToken.t[bToken.ptr].str;
-        if (!tokenStr || ((*tokenStr & OPCODE_MASK) && ((uint8_t)*tokenStr < FUNC_TYPE_SECONDARY))) break; // primary operator found
+        tokenStr = bToken->t[bToken->ptr].str;
+        if (!tokenStr || ((*tokenStr & OPCODE_MASK) && ((uint8_t)*tokenStr < FUNC_TYPE_SECONDARY))) // primary operator found
+        {
+            if (tok_list_pull())
+                continue; // another token list available
+            else
+                break; // all tokens processed
+        }
 
         if (*tokenStr)
         {
@@ -223,66 +257,85 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
             }
             else if(isdigit(*tokenStr) || (*tokenStr == '-') || (*tokenStr == '.')) // support numbers, negative numbers and float numbers starting with .
             {
-                if (strchr(tokenStr,'.'))
+                if (strchr(tokenStr,'.') || strchr(tokenStr,'E') || strchr(tokenStr,'e'))
                     rpn_push_queue(RPN_FLOAT(atof(tokenStr)));
                 else
                     rpn_push_queue(RPN_INT(strtol(tokenStr,NULL,0)));
             }
             else
             {
-                if ((variable = var_get(bToken.t[bToken.ptr].str)) != NULL)
+                if ((variable = var_get(bToken->t[bToken->ptr].str)) != NULL)
                 {
                     if (variable->value.type & VAR_TYPE_ARRAY) // array
                     {
-                        if (bToken.t[bToken.ptr].op != '[') return BasicError = BASIC_ERR_PAR_MISMATCH;
+                        if (bToken->t[bToken->ptr].op != '[') return BasicError = BASIC_ERR_PAR_MISMATCH;
                         if (rpn_push_stack(__OPCODE_ARRAY) != BASIC_ERR_NONE) return BasicError;
                         if (rpn_push_stack('[') != BASIC_ERR_NONE) return BasicError;
-                        if (rpn_push_queue(((_rpn_type_t){.type = VAR_TYPE_ARRAY,.var.array = variable})) != BASIC_ERR_NONE) return BasicError;
-                        parCnt++;
+                        if (rpn_push_queue((_rpn_type_t)
+                    {
+                        .type = VAR_TYPE_ARRAY,.var.array = variable
+                    }) != BASIC_ERR_NONE) return BasicError;
+                        bToken->parCnt++;
+                        continue;
+                    }
+                    else if (variable->value.type & VAR_TYPE_DEFFN) // function
+                    {
+                        if (bToken->t[bToken->ptr].op != '(') return BasicError = BASIC_ERR_PAR_MISMATCH;
+                        if (rpn_push_stack(__OPCODE_DEFFN) != BASIC_ERR_NONE) return BasicError;
+                        if (rpn_push_stack('(') != BASIC_ERR_NONE) return BasicError;
+                        if (rpn_push_queue((_rpn_type_t)
+                    {
+                        .type = VAR_TYPE_DEFFN,.var.deffn = variable
+                    }) != BASIC_ERR_NONE) return BasicError;
+                        bToken->parCnt++;
                         continue;
                     }
                     else
-                    rpn_push_queue(variable->value);
+                        rpn_push_queue(variable->value);
                 }
                 else
                 {
                     opCode = (uint8_t)*tokenStr;
                     if ((opCode & OPCODE_MASK) && (opCode < __OPCODE_LAST)) // check that the opcode is valid
-                        rpn_push_stack((uint8_t)*tokenStr);
+                    {
+                        if(rpn_push_stack((uint8_t)*tokenStr) != BASIC_ERR_NONE) return BasicError;
+                    }
                     else
                         return BasicError = BASIC_ERR_UNKNOWN_VAR;
                 }
             }
+            //  bToken->ptr++;
         }
-        if ((!bToken.t[bToken.ptr].op) || (bToken.t[bToken.ptr].op == ':') || (bToken.t[bToken.ptr].op == ';')) /// eol, ":" or terminator ends the evaluation
-            break;
-        switch(bToken.t[bToken.ptr].op)
+        if ((!bToken->t[bToken->ptr].op) || (bToken->t[bToken->ptr].op == ':') || (bToken->t[bToken->ptr].op == ';')) /// eol, ":" or terminator ends the evaluation
+        {
+            if (tok_list_pull())
+                continue; // another token list available
+            else
+                break; // all tokens processed
+        }
+        switch(bToken->t[bToken->ptr].op)
         {
         case ' ': // skip
             break;
-        case ',': // skip if inside brackets
-            break;
-            if (!parCnt) // evaluate the stack and store in the queue
+        case ',':
+            if (bToken->parCnt) // evaluate inside the brackets
             {
-                while ((opCode = rpn_pop_stack()))
-                {
-                    rpn_eval(opCode);
-#if RPN_PRINT_DEBUG
-                    rpn_print_queue(true);
-                    rpn_print_stack(true);
-                    if(BasicError) printf("RPN error(0): %s\n",BErrorText[BasicError]);
-#endif
-                    if (BasicError) return BasicError;
-                }
+                while (rpn_peek_stack_last() != '(' && rpn_peek_stack_last() != '[')
+                    if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) return BasicError;
+            }
+            else // evaluate the stack and store in the queue
+            {
+                while ((opCode = rpn_pop_stack()))// && (opCode != '(') && (opCode != '['))
+                    if (rpn_eval(opCode) != BASIC_ERR_NONE) return BasicError;
             }
             break;
         case '(':
-            parCnt++;
-            rpn_push_stack(bToken.t[bToken.ptr].op);
+            bToken->parCnt++;
+            rpn_push_stack(bToken->t[bToken->ptr].op);
             break;
         case ')':
         case ']':
-            if (parCnt) parCnt--;
+            if (bToken->parCnt) bToken->parCnt--;
             else
                 return BasicError = BASIC_ERR_PAR_MISMATCH;
             while (rpn_peek_stack_last() != '(' && rpn_peek_stack_last() != '[')
@@ -291,19 +344,19 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
                 if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) break;
             }
             rpn_pop_stack(); // remove the opening bracket
-            if (rpn_peek_stack_last() > OPCODE_MASK) 
+            if (rpn_peek_stack_last() > OPCODE_MASK)
                 if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE)  return BasicError; // evaluate function
             break;
         case '^': // ^ is evaluated right-to-left, natively to RPN, so just stack it
-            rpn_push_stack(bToken.t[bToken.ptr].op);
+            rpn_push_stack(bToken->t[bToken->ptr].op);
             break;
         default:
-            if (get_precedence(bToken.t[bToken.ptr].op) > get_precedence(rpn_peek_stack_last())) rpn_push_stack(bToken.t[bToken.ptr].op);
+            if (get_precedence(bToken->t[bToken->ptr].op) > get_precedence(rpn_peek_stack_last())) rpn_push_stack(bToken->t[bToken->ptr].op);
             else
             {
-                while ((rpn_peek_stack_last() != '(') && (get_precedence(bToken.t[bToken.ptr].op) <= get_precedence(rpn_peek_stack_last())))
+                while ((rpn_peek_stack_last() != '(') && (get_precedence(bToken->t[bToken->ptr].op) <= get_precedence(rpn_peek_stack_last())))
                     if (rpn_eval(rpn_pop_stack()) != BASIC_ERR_NONE) break;
-                rpn_push_stack(bToken.t[bToken.ptr].op);
+                rpn_push_stack(bToken->t[bToken->ptr].op);
             }
         }
 #if RPN_PRINT_DEBUG
@@ -324,5 +377,5 @@ _bas_err_e token_eval_expression(uint8_t opParam) // if subEval is true, the wil
 #endif
         if (BasicError) return BasicError;
     }
-    return BasicError = parCnt ? BASIC_ERR_PAR_MISMATCH : BASIC_ERR_NONE;
+    return BasicError = bToken->parCnt ? BASIC_ERR_PAR_MISMATCH : BASIC_ERR_NONE;
 }

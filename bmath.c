@@ -147,7 +147,7 @@ _bas_err_e __rad(_rpn_type_t *param)
 };
 _bas_err_e __min(_rpn_type_t *p1)
 {
-    _rpn_type_t *p2 = rpn_pop_queue();
+    _rpn_type_t *p2 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_FLOAT) || (p2->type < VAR_TYPE_FLOAT))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -160,7 +160,7 @@ _bas_err_e __min(_rpn_type_t *p1)
 };
 _bas_err_e __max(_rpn_type_t *p1)
 {
-    _rpn_type_t *p2 = rpn_pop_queue();
+    _rpn_type_t *p2 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_FLOAT) || (p2->type < VAR_TYPE_FLOAT))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -176,7 +176,7 @@ _bas_err_e __max(_rpn_type_t *p1)
 
 _bas_err_e __and(_rpn_type_t *p2)
 {
-    _rpn_type_t *p1 = rpn_pop_queue();
+    _rpn_type_t *p1 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_INTEGER) || (p2->type < VAR_TYPE_INTEGER))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -186,7 +186,7 @@ _bas_err_e __and(_rpn_type_t *p2)
 
 _bas_err_e __or(_rpn_type_t *p2)
 {
-    _rpn_type_t *p1 = rpn_pop_queue();
+    _rpn_type_t *p1 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_INTEGER) || (p2->type < VAR_TYPE_INTEGER))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -196,7 +196,7 @@ _bas_err_e __or(_rpn_type_t *p2)
 
 _bas_err_e __xor(_rpn_type_t *p2)
 {
-    _rpn_type_t *p1 = rpn_pop_queue();
+    _rpn_type_t *p1 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_INTEGER) || (p2->type < VAR_TYPE_INTEGER))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -206,7 +206,7 @@ _bas_err_e __xor(_rpn_type_t *p2)
 
 _bas_err_e __sl(_rpn_type_t *p2)
 {
-    _rpn_type_t *p1 = rpn_pop_queue();
+    _rpn_type_t *p1 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_INTEGER) || (p2->type < VAR_TYPE_FLOAT))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else
@@ -216,7 +216,7 @@ _bas_err_e __sl(_rpn_type_t *p2)
 
 _bas_err_e __sr(_rpn_type_t *p2)
 {
-    _rpn_type_t *p1 = rpn_pop_queue();
+    _rpn_type_t *p1 = rpn_pull_queue();
     if ((p1->type < VAR_TYPE_INTEGER) || (p2->type < VAR_TYPE_FLOAT))
         return BasicError = (p1->type && p2->type) ? BASIC_ERR_TYPE_MISMATCH : BASIC_ERR_FEW_ARGUMENTS;
     else

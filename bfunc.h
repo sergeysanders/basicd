@@ -50,12 +50,12 @@ enum
     __OPCODE_CLS,
     __OPCODE_LET,
     __OPCODE_DIM,
+    __OPCODE_DEF,
     __OPCODE_DATA,
     __OPCODE_READ,
     __OPCODE_RUN,
     __OPCODE_LIST,
     __OPCODE_NEW,
-    __OPCODE_ARRAY,
     __OPCODE_AT,
     __OPCODE_INK,
     __OPCODE_PAPER,
@@ -80,6 +80,8 @@ enum
     __OPCODE_XOR,
     __OPCODE_SL,
     __OPCODE_SR,
+    __OPCODE_ARRAY,
+    __OPCODE_DEFFN,
     __OPCODE_LAST,
 };
 

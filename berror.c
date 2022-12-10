@@ -37,6 +37,7 @@ const char *BErrorText[BASIC_ERR_COUNT] =
     "Wrong usage of string var",
     "Missing parenthese",
     "Too few arguments",
+    "Too many arguments",
     "Missing operand",
     "Missing operator",
     "Missing \'=\'",
@@ -56,4 +57,7 @@ const char *BErrorText[BASIC_ERR_COUNT] =
     "Array redefine",
     "Array out of range",
     "Wrong array dimentions",
+    "Variable redefine",
+    "Function redefine",
+    "Max aruments exceeded",
 };

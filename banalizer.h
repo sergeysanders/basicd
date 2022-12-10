@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2022 Sergey Sanders
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -23,24 +23,25 @@
 #ifndef _BANALIZER_H_INCLUDED
 #define _BANALIZER_H_INCLUDED
 
-#define PARSER_MAX_TOKENS   32
-
-#define BASIC_VAR_NAME_LEN  16
-#define BASIC_VAR_MAX_COUNT 32
-
 #include "bcore.h"
 
-struct _bas_token
+typedef struct __attribute ((packed))
 {
-    struct
-    {
     char *str;
     char op;
-    } t[PARSER_MAX_TOKENS];
-    uint8_t ptr;
-};
+} _bas_token_t;
 
-extern struct _bas_token bToken;
+typedef struct __attribute ((packed))
+{
+    _bas_token_t *t;
+    uint8_t ptr;
+    uint8_t parCnt;
+} _bas_tok_list_t;
+
+bool tok_list_push(_bas_tok_list_t *tokensList);
+bool tok_list_pull(void);
+
+extern _bas_tok_list_t *bToken;
 _bas_var_t *var_get(char *name);
 bool tokenizer(char *str);
 _bas_err_e token_eval_expression(uint8_t opParam);

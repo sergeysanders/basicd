@@ -24,8 +24,10 @@
 #ifndef _BCORE_H_INCLUDED
 #define _BCORE_H_INCLUDED
 
+#define PARSER_MAX_TOKENS   32
 #define BASIC_VAR_NAME_LEN  16
-#define BASIC_VAR_MAX_COUNT 32
+#define BASIC_VAR_MAX_COUNT 64
+#define BASIC_DEFFN_MAX_ARGS 4
 
 #define BASIC_LINE_LEN 120
 
@@ -62,8 +64,9 @@ typedef struct
     void *next;
     union
     {
-        uint16_t size[2]; // allocated memory size for complex variables,string - size[0], arrays size[dim 0],size[dim 1]
-        _bas_loop_t *loop; // pointer to loop parameter
+        uint8_t argc;       // function arguments count
+        uint16_t size[2];   // allocated memory size for complex variables,string - size[0], arrays size[dim 0],size[dim 1]
+        _bas_loop_t *loop;  // pointer to loop parameter
     }param;
     char *name;
 } _bas_var_t;

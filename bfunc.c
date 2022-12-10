@@ -30,7 +30,7 @@
 #include <math.h>
 #include "rpn.h"
 #include "bcore.h"
-#include "bstring.h"
+#include "banalizer.h"
 #include "bfunc.h"
 #include "bprime.h"
 #include "bmath.h"
@@ -39,10 +39,11 @@
 
 static _bas_err_e __basic_dummy(_rpn_type_t *param);
 static _bas_err_e __array(_rpn_type_t *param);
+static _bas_err_e __deffn(_rpn_type_t *param);
 
 const _bas_func_t BasicFunction[] =
 {
-    /// --- basic primary operators
+    /// --- basic primary operators (procedures)
     {"rem",__rem},
     /// --- program flow ctrol
     {"if",__if},
@@ -64,14 +65,14 @@ const _bas_func_t BasicFunction[] =
     /// --- data manipulation
     {"let",__let},
     {"dim",__dim},
+    {"def",__def},
     {"data",__basic_dummy},
     {"read",__basic_dummy},
     /// --- interpreter control
     {"run",__run},
     {"list",__list},
     {"new",__new}, /// all operators after this point should be executed in context of other operators
-    /// --- basic secondary operators
-    {" ",__array}, /// access to arrays element
+    /// --- basic secondary operators (functions)
     /// --- input/output format
     {"at",__basic_dummy},
     {"ink",__basic_dummy},
@@ -101,6 +102,9 @@ const _bas_func_t BasicFunction[] =
     {"xor#",__xor},
     {"sl#",__sl},
     {"sr#",__sr},
+    /// data type 
+    {" ",__array}, /// access to arrays element
+    {" ",__deffn}, /// implement define function
     //  {NULL,NULL}
 };
 
@@ -123,34 +127,25 @@ static _bas_err_e __basic_dummy(_rpn_type_t *param)
     return BasicError = BASIC_ERR_NONE;
 };
 
-
 static _bas_err_e __array(_rpn_type_t *param)
 {
-    _bas_var_t *array = (rpn_peek_queue(true))->var.array; // get array
+    _bas_var_t *array;
+    if (!rpn_find_queue(VAR_TYPE_ARRAY)) return BASIC_ERR_QUEUE_EMPTY; // should not happened
+    array = (rpn_peek_queue(false))->var.array; // get array
     bool stringArray = array->value.type == VAR_TYPE_ARRAY_STRING ? true : false;
-    _rpn_type_t *var[2];
-    if (!array->param.size[1] || stringArray) // 1 or 2 dimentions
-    {
-        var[0] = param;
-        var[1] = 0;
-    }
-    else
-    {
-        var[0] = rpn_pop_queue();
-        var[1] = param;
-    }
+    _rpn_type_t *var;
     uint16_t tmpArrayPtr, arrayPtr = 0;
     for (uint8_t i=0; i < ((array->param.size[1] && !stringArray) ? 2 : 1); i++)
     {
-        if (!var[i]->type || (var[i]->type < VAR_TYPE_FLOAT)) return BasicError = BASIC_ERR_TYPE_MISMATCH;
+        if ((var = rpn_peek_queue(false))->type  == VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
+        if (!var->type || (var->type < VAR_TYPE_FLOAT)) return BasicError = BASIC_ERR_TYPE_MISMATCH;
 
-        tmpArrayPtr = (var[i]->type < VAR_TYPE_INTEGER) ? (uint16_t)var[i]->var.f : (uint16_t)var[i]->var.i;
+        tmpArrayPtr = (var->type < VAR_TYPE_INTEGER) ? (uint16_t)var->var.f : (uint16_t)var->var.i;
         if (tmpArrayPtr >= array->param.size[i]) // check range
             return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
         arrayPtr = arrayPtr*array->param.size[1] + tmpArrayPtr;
     }
-        if(rpn_pop_queue()->type != VAR_TYPE_ARRAY) // there is something in stack, too much dimentions
-            return BasicError = BASIC_ERR_ARRAY_DIMENTION;
+    if (rpn_peek_queue(false)->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION; // there is something in stack, too much dimentions
     void *data;
     if (stringArray)
         data = array->value.var.array + arrayPtr*array->param.size[1];
@@ -173,5 +168,32 @@ static _bas_err_e __array(_rpn_type_t *param)
     default:
         return BasicError = BASIC_ERR_TYPE_MISMATCH;
     }
+    return BasicError = BASIC_ERR_NONE;
+};
+
+static _bas_err_e __deffn(_rpn_type_t *param)
+{
+    char argVarName[BASIC_VAR_NAME_LEN];
+    _bas_var_t *func;
+    if (!rpn_find_queue(VAR_TYPE_DEFFN)) return BASIC_ERR_QUEUE_EMPTY; // should not happened
+    func = (rpn_peek_queue(false))->var.deffn; // get function tokens
+    if (func->param.argc) // there are arguments
+    {
+        uint8_t indexChr = strlen(func->name);
+        _bas_var_t *var;
+        strcpy(argVarName,func->name);
+        argVarName[indexChr+1]=0;
+        for (uint8_t i=0;i<func->param.argc;i++)
+        {
+            argVarName[indexChr] = '0'+i;
+            if ((var = var_get(argVarName)) == NULL) return BasicError = BASIC_ERR_UNKNOWN_VAR;
+            var->value = *rpn_peek_queue(false);
+            if (var->value.type == VAR_TYPE_NONE) return BasicError = BASIC_ERR_FEW_ARGUMENTS;
+        }
+        if (rpn_peek_queue(false)->type != VAR_TYPE_NONE) return BasicError = BASIC_ERR_MANY_ARGUMENTS;
+    }
+    ((_bas_tok_list_t *)func->value.var.deffn)->ptr = -1;
+    ((_bas_tok_list_t *)func->value.var.deffn)->parCnt = 0;
+    tok_list_push(func->value.var.deffn);
     return BasicError = BASIC_ERR_NONE;
 };
