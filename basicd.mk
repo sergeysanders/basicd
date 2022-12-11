@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=Sergey Sanders
-Date                   :=09/12/2022
+Date                   :=11/12/2022
 CodeLitePath           :="/Users/sergey/Library/Application Support/CodeLite"
 LinkerName             :=clang
 SharedObjectLinkerName :=clang -shared -fPIC
@@ -62,8 +62,8 @@ AS       := llvm-as
 ## User defined environment variables
 ##
 CodeLiteDir:=/Applications/codelite.app/Contents/SharedSupport/
-Objects0=$(IntermediateDirectory)/memport.c$(ObjectSuffix) $(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IntermediateDirectory)/bmath.c$(ObjectSuffix) $(IntermediateDirectory)/bprime.c$(ObjectSuffix) \
-	
+Objects0=$(IntermediateDirectory)/memport.c$(ObjectSuffix) $(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IntermediateDirectory)/bscreen.c$(ObjectSuffix) $(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IntermediateDirectory)/banalizer.c$(ObjectSuffix) $(IntermediateDirectory)/bfunc.c$(ObjectSuffix) $(IntermediateDirectory)/bstring.c$(ObjectSuffix) $(IntermediateDirectory)/berror.c$(ObjectSuffix) $(IntermediateDirectory)/bmath.c$(ObjectSuffix) \
+	$(IntermediateDirectory)/bprime.c$(ObjectSuffix) 
 
 
 
@@ -108,6 +108,11 @@ $(IntermediateDirectory)/rpn.c$(ObjectSuffix): rpn.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/rpn.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/rpn.c$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/rpn.c$(PreprocessSuffix): rpn.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/rpn.c$(PreprocessSuffix) rpn.c
+
+$(IntermediateDirectory)/bscreen.c$(ObjectSuffix): bscreen.c
+	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bscreen.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bscreen.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/bscreen.c$(PreprocessSuffix): bscreen.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/bscreen.c$(PreprocessSuffix) bscreen.c
 
 $(IntermediateDirectory)/bcore.c$(ObjectSuffix): bcore.c
 	$(CC) $(SourceSwitch) "/Users/sergey/projloc/rimer/basicd/bcore.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/bcore.c$(ObjectSuffix) $(IncludePath)

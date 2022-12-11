@@ -20,45 +20,17 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#ifndef _BSCREEN_H_INCLUDED
+#define _BSCREEN_H_INCLUDED
 
-#include "berror.h"
+#include "rpn.h"
 
-_bas_err_e BasicError;
+_bas_err_e __at(_rpn_type_t *p2);
+_bas_err_e __ink(_rpn_type_t *p1);
+_bas_err_e __paper(_rpn_type_t *p1);
+_bas_err_e __cls(_rpn_type_t *param);
+_bas_err_e __pause(_rpn_type_t *param);
+_bas_err_e __sleep(_rpn_type_t *p1);
+_bas_err_e __inkey(_rpn_type_t *param);
 
-const char *BErrorText[BASIC_ERR_COUNT] =
-{
-    "",
-    "No line number",
-    "Duplicate line number",
-    "Invalid line number",
-    "Invalid delimiter",    
-    "String too long",
-    "Out of memory",
-    "Type mismatch",
-    "Wrong usage of string var",
-    "Missing parenthese",
-    "Too few arguments",
-    "Too many arguments",
-    "Missing operand",
-    "Missing operator",
-    "Missing \'=\'",
-    "Unknown variable",
-    "Unknown operator",
-    "Unknown function",
-    "Using reserved name",
-    "Missing \"then\"",
-    "RPN queue is empty",
-    "RPN queue is full",
-    "RPN stack is full",
-    "Divide by zero",
-    "Incomplete FOR loop",
-    "File not found",
-    "GOSUB stack overflow",
-    "RETURN without GOSUB",
-    "Array redefine",
-    "Array out of range",
-    "Wrong array dimentions",
-    "Variable redefine",
-    "Function redefine",
-    "Max aruments exceeded",
-};
+#endif //_BSCREEN_H_INCLUDED

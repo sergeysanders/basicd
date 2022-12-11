@@ -36,8 +36,8 @@
 #define OPERATOR_MUL        '*'
 #define OPERATOR_DIV        '/'
 #define OPERATOR_MOD        '%'
-#define OPERATOR_ADD        '+'
-#define OPERATOR_SUB        '-'
+#define OPERATOR_PLUS       '+'
+#define OPERATOR_MINUS      '-'
 /// Logic operators
 #define OPERATOR_AND        '&'
 #define OPERATOR_OR         '|'

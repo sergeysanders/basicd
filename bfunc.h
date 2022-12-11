@@ -29,6 +29,7 @@
 
 #define FUNC_TYPE_SECONDARY __OPCODE_AT
 #define FUNC_TYPE_PRIMARY   OPCODE_MASK
+#define FUNC_TYPE_NOARG     __OPCODE_INKEY
 
 enum
 {
@@ -46,7 +47,7 @@ enum
     __OPCODE_PRINT,
     __OPCODE_INPUT,
     __OPCODE_PAUSE,
-    __OPCODE_INKEY$,
+    __OPCODE_SLEEP,
     __OPCODE_CLS,
     __OPCODE_LET,
     __OPCODE_DIM,
@@ -80,9 +81,10 @@ enum
     __OPCODE_XOR,
     __OPCODE_SL,
     __OPCODE_SR,
+    __OPCODE_INKEY,    
     __OPCODE_ARRAY,
     __OPCODE_DEFFN,
-    __OPCODE_LAST,
+    __OPCODE_LAST
 };
 
 typedef enum

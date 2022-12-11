@@ -67,7 +67,6 @@ _bas_err_e __goto(_rpn_type_t *param)
     ExecLine.statement = 0;
     BasicStat = BASIC_STAT_JUMP;
     return BasicError = BASIC_ERR_NONE;
-
 }
 
 _bas_err_e __if(_rpn_type_t *param)
@@ -137,13 +136,20 @@ _bas_err_e __input(_rpn_type_t *param)
     _bas_var_t *var;
     do
     {
-        if (*bToken->t[bToken->ptr].str == '\"')
+        while (*bToken->t[bToken->ptr].str & OPCODE_MASK)
+        {
+            if(token_eval_expression(0)) 
+                return BasicError;
+            bToken->ptr++;
+        }
+        while (*bToken->t[bToken->ptr].str == '\"')
         {
             bToken->t[bToken->ptr].str++;
             bToken->t[bToken->ptr].str[strlen(bToken->t[bToken->ptr].str)-1] = '\0';
             printf("%s",bToken->t[bToken->ptr++].str);
         }
         if (!bToken->t[bToken->ptr].str || *bToken->t[bToken->ptr].str == '\0') return BasicError = BASIC_ERR_MISSING_OPERAND;
+        if (*bToken->t[bToken->ptr].str & OPCODE_MASK) return BasicError = BASIC_ERR_RESERVED_NAME;
         if ((var = var_get(bToken->t[bToken->ptr].str)) == NULL)
             if ((var = var_add(bToken->t[bToken->ptr].str)) == NULL) return BasicError; // cannot add a variable
         scanf("%127s",strTmpBuff);
@@ -203,7 +209,7 @@ _bas_err_e __let(_rpn_type_t *param)
             return BasicError = BASIC_ERR_TYPE_MISMATCH;
         else
             var->value.var.i = (tmpVar->type & VAR_TYPE_FLOAT) ? (int32_t)tmpVar->var.f : tmpVar->var.i;
-        if (var->value.type == VAR_TYPE_BYTE) var->value.var.i &= 0xff;
+        if (var->value.type == VAR_TYPE_BYTE) var->value.var.i = (uint32_t)var->value.var.i & 0xff;
         break;
     case VAR_TYPE_STRING:
         if(tmpVar->type != VAR_TYPE_STRING)
@@ -229,8 +235,8 @@ static _bas_err_e var_get_loop(float *var)
     switch (tmpVar->type)
     {
     case VAR_TYPE_INTEGER:
-        //case VAR_TYPE_BOOL:
-        //case VAR_TYPE_BYTE:
+    case VAR_TYPE_BOOL:
+    case VAR_TYPE_BYTE:
         tmpVar->var.f = (float)tmpVar->var.i;
     case VAR_TYPE_FLOAT:
     case VAR_TYPE_LOOP:
@@ -407,7 +413,7 @@ _bas_err_e __def(_rpn_type_t *param)
             if (var_get(argVarName) != NULL) return BasicError = BASIC_ERR_VAR_REDEFINE;
             if (var_add(argVarName) == NULL) return BasicError; // cannot add a variable
         }
-      if (bToken->t[bToken->ptr].op == '\0') return BasicError = BASIC_ERR_PAR_MISMATCH;  
+        if (bToken->t[bToken->ptr].op == '\0') return BasicError = BASIC_ERR_PAR_MISMATCH;
     }
     while (bToken->t[bToken->ptr].op != ')');
     if (bToken->t[++bToken->ptr].op != '=')
@@ -426,7 +432,7 @@ _bas_err_e __def(_rpn_type_t *param)
                 }
         bToken->t[i].str = (char *)0+strPtr; // store the token pointer offsets to the temp buffer
         if (strPtr >= BASIC_STRING_LEN-3) return BASIC_ERR_STRING_LENGTH;
-        while(*varName) 
+        while(*varName)
             strTmpBuff[strPtr++] = *(varName++);
         strTmpBuff[strPtr++] = '\0';
         if ((!bToken->t[i].op) || (bToken->t[i].op == ':') || (bToken->t[i].op == ';')) break;

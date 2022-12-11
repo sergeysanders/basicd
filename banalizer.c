@@ -62,8 +62,8 @@ const struct
     {OPERATOR_MUL, 5},
     {OPERATOR_DIV, 5},
     {OPERATOR_MOD, 5},
-    {OPERATOR_ADD, 4},
-    {OPERATOR_SUB, 4},
+    {OPERATOR_PLUS, 4},
+    {OPERATOR_MINUS, 4},
     {OPERATOR_MORE, 3},
     {OPERATOR_LESS, 3},
     {OPERATOR_EQUAL, 3},
@@ -104,6 +104,7 @@ bool tokenizer(char *str) // return false if total number of bLineToken.ts is gr
 {
     static char tokenString[BASIC_LINE_LEN];
     uint8_t strPtr = 0;
+    uint8_t lastOp = 0;
     bool trSpace = false;
     bool tokStr = false;
     bool done = false;
@@ -128,12 +129,7 @@ bool tokenizer(char *str) // return false if total number of bLineToken.ts is gr
         case '\0':
             done = true;
             quoted = false;
-        case '-':
-            if (!done && ((strPtr == 0) || (isdigit(str[strPtr-2]) && ((str[strPtr-1] == 'E') || (str[strPtr-1] == 'e')))))// || (*str & OPCODE_MASK))) // negative number or exponent sign
-            {
-                strPtr++;
-                break;
-            }
+        case OPERATOR_MUL:
         case OPERATOR_DIV:
         case OPERATOR_MOD:
         case OPERATOR_PWR:
@@ -145,13 +141,25 @@ bool tokenizer(char *str) // return false if total number of bLineToken.ts is gr
         case OPERATOR_NOT:
         case '[':
         case ']':
-        case '(' ... ',':
+        case '(':
+        case ')':
+        case ',':
         case ':' ... '>':
             if (quoted)
                 strPtr++;
             else
                 bLineToken.t[bLineToken.ptr].op = done ? 0x01 : str[strPtr];
             break;
+        /// --- minus and plus process
+        case OPERATOR_MINUS:
+        case OPERATOR_PLUS:
+            if ((!done && (strPtr == 0) && (lastOp != ')' && lastOp != ']')) ||\
+            (quoted || (isdigit(str[strPtr-2]) && ((str[strPtr-1] == 'E') || (str[strPtr-1] == 'e'))))) // || (*str & OPCODE_MASK))) // negative number or exponent sign
+                strPtr++;
+            else
+                bLineToken.t[bLineToken.ptr].op = done ? 0x01 : str[strPtr];
+            break;
+
         case '"': // process quoted string
             if (quoted)
             {
@@ -211,6 +219,7 @@ bool tokenizer(char *str) // return false if total number of bLineToken.ts is gr
         if (bLineToken.t[bLineToken.ptr].op)
         {
             if(done) bLineToken.t[bLineToken.ptr].op = '\0';
+            lastOp = bLineToken.t[bLineToken.ptr].op;
             bLineToken.t[bLineToken.ptr++].str = str;
             str[strPtr++] = 0;
             str = &str[strPtr];

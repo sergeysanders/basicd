@@ -192,7 +192,7 @@ _bas_err_e rpn_eval(uint8_t op)
     _rpn_type_t value[2];
     bool doFloat = false;
     if (!op || (op == ' ')) return BasicError = BASIC_ERR_PAR_MISMATCH;
-    if (op < __OPCODE_ARRAY) value[0] = *rpn_pull_queue(); // arrays and deffn have variable number of params
+    if (op < FUNC_TYPE_NOARG) value[0] = *rpn_pull_queue(); // arrays and deffn have variable number of params
     if (op >= OPCODE_MASK)
     {
         if(op < __OPCODE_LAST)
@@ -210,24 +210,14 @@ _bas_err_e rpn_eval(uint8_t op)
         if ((value[0].type & VAR_TYPE_FLOAT) || (value[1].type & VAR_TYPE_FLOAT)) // treat as float if one of the operands is float.
         {
             doFloat = true;
-            if (value[0].type & VAR_TYPE_INTEGER)
-            {
-                value[0] = RPN_FLOAT(value[0].var.i);
-//                value[0].var.f = (float)value[0].var.i;
-//                value[0].type = VAR_TYPE_FLOAT;
-            }
-            if (value[1].type & VAR_TYPE_INTEGER)
-            {
-                value[1] = RPN_FLOAT(value[1].var.i);
-//                value[1].var.f = (float)value[1].var.i;
-//                value[1].type = VAR_TYPE_FLOAT;
-            }
+            if (value[0].type & VAR_TYPE_INTEGER) value[0] = RPN_FLOAT(value[0].var.i);
+            if (value[1].type & VAR_TYPE_INTEGER) value[1] = RPN_FLOAT(value[1].var.i);
         }
     }
     switch(op)
     {
     // Math equations
-    case OPERATOR_ADD:
+    case OPERATOR_PLUS:
         if (value[0].type == VAR_TYPE_STRING)
         {
             string_add(value[1].var.str,value[0].var.str);
@@ -237,10 +227,14 @@ _bas_err_e rpn_eval(uint8_t op)
             value[0].var.f = value[1].var.f + value[0].var.f;
         else
             value[0].var.i = value[1].var.i + value[0].var.i;
+            
         break;
-    case OPERATOR_SUB:
+    case OPERATOR_MINUS:
         if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
-        value[0].var.f = value[1].var.f - value[0].var.f;
+        if (doFloat)
+            value[0].var.f = value[1].var.f - value[0].var.f;
+        else
+            value[0].var.i = value[1].var.i - value[0].var.i;
         break;
     case OPERATOR_MUL:
         if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
@@ -273,7 +267,6 @@ _bas_err_e rpn_eval(uint8_t op)
             value[0].var.i = pow(value[1].var.i,value[0].var.i);
 
         break;
-
     default:
         switch(op)
         {
@@ -331,14 +324,18 @@ _bas_err_e rpn_eval(uint8_t op)
             value[0].var.i = ((value[1].var.f && value[0].var.f) ? 1 : 0);
             break;
         case OPERATOR_OR:
-            if (doFloat)
-                value[0].var.i = ((value[1].var.f || value[0].var.f) ? 1 : 0);
+            value[0].var.i = ((value[1].var.f || value[0].var.f) ? 1 : 0);
             break;
         default:
             return BasicError = BASIC_ERR_UNKNOWN_OP;
         }
         if (value[0].type == VAR_TYPE_STRING) return BasicError = BASIC_ERR_TYPE_MISMATCH;
         value[0].type = VAR_TYPE_BOOL;
+    }
+    if ((value[1].type == VAR_TYPE_BYTE) && (value[0].type != VAR_TYPE_BOOL))
+    {
+        value[0].type = VAR_TYPE_BYTE;
+        value[0].var.i = (uint32_t)value[0].var.i & 0x0ff;
     }
     rpn_push_queue(value[0]);
     return BasicError = BASIC_ERR_NONE;

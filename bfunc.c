@@ -34,6 +34,7 @@
 #include "bfunc.h"
 #include "bprime.h"
 #include "bmath.h"
+#include "bscreen.h"
 #include "bstring.h"
 #include "berror.h"
 
@@ -59,9 +60,9 @@ const _bas_func_t BasicFunction[] =
     /// --- input/output
     {"print",__print},
     {"input",__input},
-    {"pause",__basic_dummy},
-    {"inkey$",__basic_dummy},
-    {"cls",__basic_dummy},
+    {"pause",__pause},
+    {"sleep",__sleep},
+    {"cls",__cls},
     /// --- data manipulation
     {"let",__let},
     {"dim",__dim},
@@ -74,9 +75,9 @@ const _bas_func_t BasicFunction[] =
     {"new",__new}, /// all operators after this point should be executed in context of other operators
     /// --- basic secondary operators (functions)
     /// --- input/output format
-    {"at",__basic_dummy},
-    {"ink",__basic_dummy},
-    {"paper",__basic_dummy},
+    {"at",__at},
+    {"ink",__ink},
+    {"paper",__paper},
     /// --- string/type
     {"val$",__val$},
     {"hex$",__hex$},
@@ -102,6 +103,8 @@ const _bas_func_t BasicFunction[] =
     {"xor#",__xor},
     {"sl#",__sl},
     {"sr#",__sr},
+    /// --- no argument functions
+    {"inkey",__inkey},
     /// data type 
     {" ",__array}, /// access to arrays element
     {" ",__deffn}, /// implement define function

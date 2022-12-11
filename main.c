@@ -72,6 +72,8 @@ int main(int argc, char **argv)
     }
 
     prog_run(0);
+    void screen_deinit(void);
+    screen_deinit();
 #endif
     return 0;
 }
