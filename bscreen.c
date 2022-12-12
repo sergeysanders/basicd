@@ -145,10 +145,11 @@ _bas_err_e __sleep(_rpn_type_t *param)
 _bas_err_e __inkey(_rpn_type_t *param)
 {
     char c = 0;
-    if (kbhit())
+    uint8_t buffCnt = kbhit();
+    if (buffCnt)
     {
         c = getchar();
-        if ((c == 27) && kbhit()) // process cursor keys
+        if ((c == 27) && (buffCnt>1)) // process cursor keys
             c = getchar();
     }
     return rpn_push_queue(RPN_BYTE(c));

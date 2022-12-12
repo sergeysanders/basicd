@@ -20,10 +20,6 @@
 162 if key_ = 115 or key_ = 66 then dir_ = 1: goto 170 ' S (Down)
 163 if key_ = 100 or key_ = 67 then dir_ = 2: goto 170 ' D (Right)
 164 if key_ = 97 or key_ = 68 then  dir_ = 3: goto 170 ' A (Left)
-#161 if key_ = 65 then dir_ = 0: goto 170 ' W (Up)
-#162 if key_ = 66 then dir_ = 1: goto 170 ' S (Down)
-#163 if key_ = 67 then dir_ = 2: goto 170 ' D (Right)
-#164 if key_ = 68 then  dir_ = 3: goto 170 ' A (Left)
 165 if key_ = 27 then goto 1000 ' Esc (Exit)
 170 snake_[head_,0] = snake_[head_-1,0] : snake_[head_,1] = snake_[head_-1,1]
 200 if dir_ = 0 then snake_[head_,1] = snake_[head_,1] - 1: goto 240
@@ -41,10 +37,10 @@
 666 goto 1000
 800 gosub 900 ' put a new rabbit
 810 length_ = length_ + 1:print ink(7);at(XSIZE_/2-5,YSIZE_);" LENGTH : ";length_;" "
-820 if length_ < MAX_LENGTH then return ' snake is not grown up
+820 if length_ < MAX_LENGTH then return ' snake didn't grow up yet 
 830 LEVEL = LEVEL + 1: if LEVEL > MAX_LEVEL then print at(XSIZE_/2-5,YSIZE_/2);ink(5);"You WIN!": goto 1100
 835 gosub 950
-840 for r=0 to 255: snake_[r,0] = 0: snake_[r,1] = 0:next r
+840 for r=0 to 255: snake_[r,0] = 0: snake_[r,1] = 0:next r ' clear the snake coordinates
 850 snake_[0,0] = XSIZE_/2,YSIZE_/2+2
 860 head_ = 0:length_ = 1
 870 return

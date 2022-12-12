@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 #else
     if (argc < 2)
     {
-     printf("BasicD usage: basicd file.gas\n");
+     printf("BasicD usage: basicd file.bas\n");
      exit(0);
     }
     

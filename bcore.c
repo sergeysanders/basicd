@@ -401,11 +401,11 @@ _bas_stat_e basic_line_eval(void)
             }
 
         }
-        if (bToken->t[bToken->ptr].op == ';') 
-            {
-                BasicError = BASIC_ERR_INVALID_DELIMITER;
-                return BasicStat = BASIC_STAT_ERR;
-            }
+        if (bToken->t[bToken->ptr].op == ';')
+        {
+            BasicError = BASIC_ERR_INVALID_DELIMITER;
+            return BasicStat = BASIC_STAT_ERR;
+        }
         if (bToken->t[bToken->ptr].op == ':')
             ExecLine.statement ++;
         else if (!bToken->t[bToken->ptr].op || ((uint8_t)*bToken->t[bToken->ptr].str != __OPCODE_THEN)) return BasicStat = BASIC_STAT_OK;
@@ -513,21 +513,23 @@ _bas_err_e array_set(char *name,bool init) // set array elements
         token_eval_expression(0);
         bToken->ptr++;
         if ((dimVar = rpn_pull_queue())->type == VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
-        if (var->param.size[1]) // two dimentional array
+        if (var->param.size[1] && (var->value.type != VAR_TYPE_ARRAY_STRING)) // two dimentional array
         {
-            if (var->value.type == VAR_TYPE_ARRAY_STRING) return BasicError = BASIC_ERR_ARRAY_DIMENTION;  // string array has only one dimention
-            dimPtr[1] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
+            dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
+            if(dimPtr[0] >= var->param.size[1]) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
             if ((dimVar = rpn_pull_queue())->type == VAR_TYPE_NONE) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
-            if(dimPtr[1] >= var->param.size[1]) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+            dimPtr[1] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
         }
-        dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
+        else
+            dimPtr[0] = (uint16_t)((dimVar->type & VAR_TYPE_FLOAT) ? dimVar->var.f : (dimVar->type & VAR_TYPE_INTEGER) ? dimVar->var.i : 0);
         if(dimPtr[0] >= var->param.size[0]) return BasicError = BASIC_ERR_ARRAY_OUTOFRANGE;
+        if ((var->value.type != VAR_TYPE_ARRAY_STRING) && (rpn_pull_queue()->type != VAR_TYPE_NONE)) return BasicError = BASIC_ERR_ARRAY_DIMENTION;
     }
     if (bToken->t[bToken->ptr++].op != '=') return BasicError = BASIC_ERR_MISSING_EQUAL;
     if (token_eval_expression(0) != BASIC_ERR_NONE) return BasicError;
 
     bool head = true;
-    uint32_t arrayPtr = dimPtr[1] + dimPtr[0] * var->param.size[1];
+    uint32_t arrayPtr =  dimPtr[0] + dimPtr[1] * var->param.size[1];
     uint32_t arrayLimit = var->param.size[0] * var->param.size[1]+((var->value.type == VAR_TYPE_ARRAY_STRING) ? 0 : var->param.size[0]);
     uint8_t dSize = var->value.type == VAR_TYPE_ARRAY_STRING ? var->param.size[1] : (var->value.type == VAR_TYPE_ARRAY_BYTE ? 1 : 4);
     void *data = var->value.var.array + arrayPtr * dSize;
